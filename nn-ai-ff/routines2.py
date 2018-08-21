@@ -1,9 +1,13 @@
+from simtk.openmm.app import *
+from simtk.openmm import *
+from simtk.unit import *
 import sys
 import numpy as np
 from numpy import linalg as LA
 import symmetry_functions as sym
 from force_field_parameters import *
-
+from keras import backend as K
+from keras import losses
 
 """
 these are general subroutines that we use for the NN program
@@ -11,7 +15,7 @@ these subroutines are meant to be indepedent of tensorflow/keras libraries,
 and are used for I/O, data manipulation (construction of symmetry functions), etc.
 """
 
-def read_sapt_data( inputfile ):
+def read_sapt_data2( inputfile ):
       """
       reads SAPT interaction energy input file, outputs
       list of all atomic coordinates, and total interaction energies
@@ -28,6 +32,7 @@ def read_sapt_data( inputfile ):
           # empty list for this dimer
           dimeraname=[]
           dimerxyz=[]
+          dimerxyzD=[]
           # first molecule
           for i in range(atoms):
               line=file.readline()
@@ -56,10 +61,17 @@ def read_sapt_data( inputfile ):
           # now read energy SAPT terms
           for i in range(19):
               line=file.readline()
-              # save total energy
+              # get E1tot+E2tot
               if i == 12 :
                   data = line.split()
-                  energy.append( float(data[1]) )
+                  e1tote2tot= float(data[1])
+              # get delta HF energy
+              elif i == 17 :
+                  data = line.split()
+                  dhf= float(data[1])                  
+              # save total energy
+          etot = e1tote2tot + dhf
+          energy.append( etot )
 
       # change lists to arrays
       xyz=np.array(xyz)
@@ -68,6 +80,23 @@ def read_sapt_data( inputfile ):
       dimeraname = aname[0]
 
       return dimeraname, xyz, energy
+
+
+
+def set_modeller_coordinates( pdb , modeller , xyz_in ):
+    """
+    this sets the coordinates of the OpenMM 'pdb' and 'modeller' objects
+    with the input coordinate array 'xyz_in'
+    """
+    # loop over atoms
+    for i in range(len(xyz_in)):
+        # update pdb positions
+        pdb.positions[i]=Vec3(xyz_in[i][0] , xyz_in[i][1], xyz_in[i][2])*nanometer
+
+    # now update positions in modeller object
+    modeller_out = Modeller(pdb.topology, pdb.positions)
+  
+    return modeller_out
 
 
 
@@ -163,6 +192,42 @@ def construct_symmetry_input( NN , rij, aname ):
         sym_input.append( input_atom )
 
     return sym_input 
+
+
+def custom_loss(en):
+    def lossFunction(y_true,y_pred):
+        loss = losses.mean_squared_error(y_true,y_pred)
+        loss *= K.exp(-en)
+    return lossFunction
+
+def scale_symmetry_input( sym_input ):
+    """
+    this subroutine scales the symmetry input to lie within the range [-1,1]
+    this helps improve the NN performance, but makes the NN and input data set dependent!
+    """
+    small=1E-6
+    # loop over atoms
+    for i_atom in range( len(sym_input) ):
+        # loop over symmetry functions
+        for i_sym in range( sym_input[i_atom].shape[1] ):
+            # min and max values of this symmetry function across the data set
+            min_sym = np.amin(sym_input[i_atom][:,i_sym] )
+            max_sym = np.amax(sym_input[i_atom][:,i_sym] )
+            range_sym = max_sym - min_sym
+
+            if range_sym > small:
+                for i_data in range( sym_input[i_atom].shape[0] ):
+                    sym_input[i_atom][i_data,i_sym] = -1.0 + 2.0 * ( ( sym_input[i_atom][i_data,i_sym] - min_sym ) / range_sym )
+            
+            # shift symmetry function value so that histogram maximum is centered at 0
+            # this is for increasing sensitivity to tanh activation function
+            hist = np.histogram( sym_input[i_atom][:,i_sym] , bins=20 )
+            shift = np.argmax(hist[0])
+            array_shift = np.full_like( sym_input[i_atom][:,i_sym] , -1.0 + 2*( shift / 20 ) )
+            sym_input[i_atom][:,i_sym] = sym_input[i_atom][:,i_sym] - array_shift[:]
+            
+
+    return sym_input
 
 
 
