@@ -1,73 +1,65 @@
 import sys
 import numpy as np
+"""Define elemental parameters that are used to construct symmetry functions.
 
-""" 
-Here we define elemental parameters that are used to construct symmetry functions.
-This can be considered a "force field", as the definition and number of symmetry functions
-essentially determines the neural network (after fitting/optimization step).
-
-The way this should work is that we should define classes of "force fields", with
-each class corresponding to a different collection of symmetry function types and definitions
+Defines classes of symmetry function parameters with each class corresponding
+to a different collection of symmetry function types and definitions.
 """
 
+
 class elementNN(object):
-    """
-    this object contains all definitions for element-specific neural network,
-    including symmetry function definitions, weight parameters, etc.
-    """
+    """Store all definitions for element-specific neural network."""
+
     def __init__(self):
-        # initialize data structures
-        self.radial_symmetry_functions=[]
-        self.angular_symmetry_functions=[]
-        self.weights=[]        
+        """Initialize data structures."""
+        self.radial_symmetry_functions = []
+        self.angular_symmetry_functions = []
+        self.weights = []
         # set default cutoff radius (Rc) for Gaussian symmetry functions
-        self.Rc = 11.5 # Bohr
+        self.Rc = 11.5  # Bohr
+
 
 class NNforce_field(object):
-    """
-    this is neural network force field object, that stores parameters that define
-    the atomic neural networks
+    """Define symmetry function parameter object
+
+    Stores parameters that define the atomic symmetry functions.
+    
+    HISTORICAL NOTE:
+    These have nothing to do with force fields in the MM sense.
+    Jesse McDaniel corresponds symmetry function parameters to 
+    force field parameters, since they and the model weights ultimately
+    determine preditcions of a system much like FF parameters. Since 
+    Dr. McDaniel wrote an early version of this code, this name has 
+    been embedded deeply in the lore of NN-SAPT and would frankly 
+    be hard to take out at this point.
     """
 
-    def __init__(self, name,i,j):
-        # setup attributes of force field based on name
+    def __init__(self, name, i, j):
+        """Setup attributes of symmetry functions based on name."""
         if name is 'FF':
-            self.initialize_FF(i,j)
+            self.initialize_FF(i, j)
         elif name is 'FF1':
-           self.initialize_FF1()
+            self.initialize_FF1()
         elif name is 'FF2':
-           self.initialize_FF2()
+            self.initialize_FF2()
         elif name is 'FF3':
-           self.initialize_FF3()
+            self.initialize_FF3()
         elif name is 'GA_opt':
             self.initialize_GA_opt()
         else:
-           print("force field name ", name , "  is not recognized")
-           sys.exit()
+            print("symmetry funciton name ", name, "  is not recognized")
+            sys.exit()
 
 
+    def initialize_FF(self, num_widths, num_cutoffs):
+        """Construct symfuns based on a naive range-based parametrization."""
 
-
-
-
-    """
-                FORCE FIELD DEFINITIONS:
-                  note that these methods contain hard-coded parameters
-                  which define different force field classes
-    """
-
-    def initialize_FF(self,num_widths,num_cutoffs):
-        """
-        This constructs force fields on the fly so many can be tested.
-        """
-        
         # create a dictionary to look up force field object for each element
-        self.element_force_field={}
+        self.element_force_field = {}
 
         # for now this is just a list of tuples that define the Gaussian width
         # shifts, and cutoff value for each Gaussian symmetry function.  Eventually, this will be
         # a more complicated object...
-
 
         gauss_width_min = 0.5
         gauss_width_max = 2.0
@@ -75,8 +67,8 @@ class NNforce_field(object):
         cutoff_min = 3.0
         cutoff_max = 6.0
 
-        gauss_vec = np.linspace(gauss_width_min,gauss_width_max,num_widths)
-        cutoff_vec = np.linspace(cutoff_min,cutoff_max,num_cutoffs)
+        gauss_vec = np.linspace(gauss_width_min, gauss_width_max, num_widths)
+        cutoff_vec = np.linspace(cutoff_min, cutoff_max, num_cutoffs)
         print(range(num_widths))
         # setup force field for oxygen
         oxygenNN = elementNN()
@@ -84,8 +76,8 @@ class NNforce_field(object):
         # add list of symmetry function tuples
         for i in range(num_widths):
             for j in range(num_cutoffs):
-                oxygenNN.symmetry_functions.append( ( gauss_vec[i], cutoff_vec[j] ) )
-
+                oxygenNN.symmetry_functions.append((gauss_vec[i],
+                                                    cutoff_vec[j]))
 
         # setup force field for hydrogen
         hydrogenNN = elementNN()
@@ -93,18 +85,14 @@ class NNforce_field(object):
         # add list of symmetry function tuples
         for i in range(num_widths):
             for j in range(num_cutoffs):
-                hydrogenNN.symmetry_functions.append( ( gauss_vec[i], cutoff_vec[j] ) )
+                hydrogenNN.symmetry_functions.append((gauss_vec[i],
+                                                      cutoff_vec[j]))
 
     def initialize_FF1(self):
-
-        """
-        this initializes our first type of neural network
-        every type of neural network must have elemental specific parameters
-        for symmetry functions
-        """
+        """Initialize first collection of symmetry functions."""
 
         # create a dictionary to look up force field object for each element
-        self.element_force_field={}
+        self.element_force_field = {}
 
         # for now this is just a list of tuples that define the Gaussian width
         # shifts, and cutoff value for each Gaussian symmetry function.  Eventually, this will be
@@ -114,42 +102,34 @@ class NNforce_field(object):
         oxygenNN = elementNN()
         self.element_force_field["O"] = oxygenNN
         # add list of symmetry function tuples
-        oxygenNN.symmetry_functions.append( ( 3.0 , 3.0 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 3.5 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 4.0 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 4.5 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 5.0 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 5.5 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 6.0 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 6.5 ) )
-        oxygenNN.symmetry_functions.append( ( 3.0 , 7.0 ) )
+        oxygenNN.symmetry_functions.append((3.0, 3.0))
+        oxygenNN.symmetry_functions.append((3.0, 3.5))
+        oxygenNN.symmetry_functions.append((3.0, 4.0))
+        oxygenNN.symmetry_functions.append((3.0, 4.5))
+        oxygenNN.symmetry_functions.append((3.0, 5.0))
+        oxygenNN.symmetry_functions.append((3.0, 5.5))
+        oxygenNN.symmetry_functions.append((3.0, 6.0))
+        oxygenNN.symmetry_functions.append((3.0, 6.5))
+        oxygenNN.symmetry_functions.append((3.0, 7.0))
 
-
-       # setup force field for hydrogen
+        # setup force field for hydrogen
         hydrogenNN = elementNN()
         self.element_force_field["H"] = hydrogenNN
         # add list of symmetry function tuples
 
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 3.0 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 3.5 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 4.0 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 4.5 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 5.0 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 5.5 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 6.0 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 6.5 ) )
-        hydrogenNN.symmetry_functions.append( ( 3.0 , 7.0 ) )
+        hydrogenNN.symmetry_functions.append((3.0, 3.0))
+        hydrogenNN.symmetry_functions.append((3.0, 3.5))
+        hydrogenNN.symmetry_functions.append((3.0, 4.0))
+        hydrogenNN.symmetry_functions.append((3.0, 4.5))
+        hydrogenNN.symmetry_functions.append((3.0, 5.0))
+        hydrogenNN.symmetry_functions.append((3.0, 5.5))
+        hydrogenNN.symmetry_functions.append((3.0, 6.0))
+        hydrogenNN.symmetry_functions.append((3.0, 6.5))
+        hydrogenNN.symmetry_functions.append((3.0, 7.0))
 
     def initialize_FF2(self):
-
-        """
-        this initializes our second type of neural network 
-        every type of neural network must have elemental specific parameters
-        for symmetry functions
-        """
-
         # create a dictionary to look up force field object for each element
-        self.element_force_field={}
+        self.element_force_field = {}
 
         # for now this is just a list of tuples that define the Gaussian width
         # shifts, and cutoff value for each Gaussian symmetry function.  Eventually, this will be
@@ -218,7 +198,7 @@ class NNforce_field(object):
         oxygenNN.angular_symmetry_functions.append((4.0, 5.0, 1))
         oxygenNN.angular_symmetry_functions.append((4.0, 5.5, 1))
 
-       # setup force field for hydrogen
+        # setup force field for hydrogen
         hydrogenNN = elementNN()
         self.element_force_field["H"] = hydrogenNN
         # add list of symmetry function tuples
@@ -380,22 +360,13 @@ class NNforce_field(object):
         nitrogenNN.angular_symmetry_functions.append((4.0, 5.0, 1))
         nitrogenNN.angular_symmetry_functions.append((4.0, 5.5, 1))
 
-
     def initialize_FF3(self):
-
-        """
-        this initializes our first type of neural network
-        every type of neural network must have elemental specific parameters
-        for symmetry functions
-        """
-
         # create a dictionary to look up force field object for each element
-        self.element_force_field={}
+        self.element_force_field = {}
 
         # for now this is just a list of tuples that define the Gaussian width
         # shifts, and cutoff value for each Gaussian symmetry function.  Eventually, this will be
         # a more complicated object...
-
 
         gauss_width_min = 0.5
         gauss_width_max = 2.0
@@ -405,8 +376,8 @@ class NNforce_field(object):
         cutoff_max = 6.0
         num_cutoffs = 5
 
-        gauss_vec = np.linspace(gauss_width_min,gauss_width_max,num_widths)
-        cutoff_vec = np.linspace(cutoff_min,cutoff_max,num_cutoffs)
+        gauss_vec = np.linspace(gauss_width_min, gauss_width_max, num_widths)
+        cutoff_vec = np.linspace(cutoff_min, cutoff_max, num_cutoffs)
         print(range(num_widths))
         # setup force field for oxygen
         oxygenNN = elementNN()
@@ -414,8 +385,8 @@ class NNforce_field(object):
         # add list of symmetry function tuples
         for i in range(num_widths):
             for j in range(num_cutoffs):
-                oxygenNN.symmetry_functions.append( ( gauss_vec[i], cutoff_vec[j] ) )
-
+                oxygenNN.symmetry_functions.append((gauss_vec[i],
+                                                    cutoff_vec[j]))
 
         # setup force field for hydrogen
         hydrogenNN = elementNN()
@@ -423,16 +394,29 @@ class NNforce_field(object):
         # add list of symmetry function tuples
         for i in range(num_widths):
             for j in range(num_cutoffs):
-                hydrogenNN.symmetry_functions.append( ( gauss_vec[i], cutoff_vec[j] ) )
-    def initialize_GA_opt(self):
+                hydrogenNN.symmetry_functions.append((gauss_vec[i],
+                                                      cutoff_vec[j]))
 
-        """
-        this initializes the parameters for the genetic algorithm optimized 
-        symmetry functions described in the wACSF paper
+    def initialize_GA_opt(self):
+        """Initializes symmetry function parameters.
+
+        These specific parameters were chosen by the genetic algorithm
+        optimized symmetry functions described in the wACSF paper. They
+        tend to work very well and are conveniently consistent across
+        atomtypes.
+
+        Some compressed parameter --> NN method might be useful in the future.
+        
+        Unless we do our own genetic algorithm optimization on particular 
+        systems (or just gradient descent as long as we can concede 
+        constant parameter count), then we should just stick with these.
+        Exhaustively looking for better parameters with grid search 
+        is intractable.
+        
         """
 
         # create a dictionary to look up force field object for each element
-        self.element_force_field={}
+        self.element_force_field = {}
 
         hydrogenNN = elementNN()
         self.element_force_field["H"] = hydrogenNN
@@ -508,7 +492,6 @@ class NNforce_field(object):
         oxygenNN.angular_symmetry_functions.append((0.5, 0, -1))
         oxygenNN.angular_symmetry_functions.append((0.5, 0, 1))
 
-
         carbonNN = elementNN()
         self.element_force_field["C"] = carbonNN
         # add list of symmetry function tuples
@@ -582,8 +565,7 @@ class NNforce_field(object):
         nitrogenNN.angular_symmetry_functions.append((0.1685744, 0, 1))
         nitrogenNN.angular_symmetry_functions.append((0.5, 0, -1))
         nitrogenNN.angular_symmetry_functions.append((0.5, 0, 1))
-        
-        
+
         fluorineNN = elementNN()
         self.element_force_field["F"] = fluorineNN
         # add list of symmetry function tuples
@@ -622,14 +604,22 @@ class NNforce_field(object):
         fluorineNN.angular_symmetry_functions.append((0.5, 0, 1))
 
     def initialize_solo_GA_opt(self):
+        """Initialize single-network symfun parameters.
 
-        """
-        this initializes the parameters for the genetic algorithm optimized 
-        symmetry functions described in the wACSF paper
+        This lets all elements share a single neural network, in theory
+        allowing cross talk for information they share. This style simply
+        encodes the element type as a one-hot encoded vector as an addition
+        to the input descriptor.
+
+        In practice, this is a really bad idea and the network has a hard
+        time discerning useful information at the quantity of data we operated
+        at (~500-50,000 points). In the future, a more sophisticated scheme
+        allowing for cross talk might be beneficial.
+
         """
 
         # create a dictionary to look up force field object for each element
-        self.element_force_field={}
+        self.element_force_field = {}
 
         all_elemNN = elementNN()
         self.element_force_field["H"] = all_elemNN

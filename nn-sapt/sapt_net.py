@@ -20,16 +20,44 @@ import symmetry_functions as sym
 import FFenergy_openMM as saptff
 from symfun_parameters import *
 
-def sapt_net(sym_input, aname, inputdir, energy, elec, exch, ind, disp, 
-                n_layer, nodes, multitarget_vec, val_split, 
-                data_fraction, dropout_fraction, l2_reg, epochs, 
-                batch_size=32, simulations=1, folds=5, 
-                total_en_mode = False):
+
+def sapt_net(sym_input,
+             aname,
+             inputdir,
+             energy,
+             elec,
+             exch,
+             ind,
+             disp,
+             n_layer,
+             nodes,
+             multitarget_vec,
+             val_split,
+             data_fraction,
+             dropout_fraction,
+             l2_reg,
+             epochs,
+             batch_size=32,
+             simulations=1,
+             folds=5,
+             total_en_mode=False):
+    """Construct and train NN-SAPT model with provided parameters.
+
+    Keras allows for the construction of a different neural network model
+    for each type of atom (C, H, O, etc.). The total output values (usually
+    SAPT energies) are taken as a sum of atomic contributions and training
+    is performed by backpropagating those errors through all networks 
+    simultaneously.
+
+    Reasonable flexibility is allowed just by calling this function 
+    with options, but considerable architectural changes will require
+    amendments to this function itself."""
+
     (ntype, atype) = routines.create_atype_list(aname,
                                                 routines.atomic_dictionary())
     #sym_input = np.transpose(sym_input, (1,0,2))
-    y = np.transpose(np.array([energy,elec,exch,ind,disp]))
-    val_scores = [] 
+    y = np.transpose(np.array([energy, elec, exch, ind, disp]))
+    val_scores = []
     """
     kfold = KFold(folds)
 
@@ -46,13 +74,14 @@ def sapt_net(sym_input, aname, inputdir, energy, elec, exch, ind, disp,
         X_train, X_test = sym_input[train], sym_input[test]
         y_train, y_test = y[train], y[test]
     """
-    
-    NNff = NNforce_field('GA_opt',0,0)
+
+    NNff = NNforce_field('GA_opt', 0, 0)
     NNunique = []
     inputelement = []
-    X_train, X_test, y_train, y_test = train_test_split(sym_input, y, test_size=val_split) 
-    X_train = np.transpose(X_train, (1,0,2))
-    X_test = np.transpose(X_test, (1,0,2))
+    X_train, X_test, y_train, y_test = train_test_split(
+        sym_input, y, test_size=val_split)
+    X_train = np.transpose(X_train, (1, 0, 2))
+    X_test = np.transpose(X_test, (1, 0, 2))
     X_train = list(X_train)
     X_test = list(X_test)
     y_train = list(y_train.T)
@@ -65,12 +94,15 @@ def sapt_net(sym_input, aname, inputdir, energy, elec, exch, ind, disp,
     t1 = time.time()
     #print(ntype)
     for i_type in range(ntype):
-        NNelement=[]
+        NNelement = []
         i_size_l = nodes[0]
-        for n in range(n_layer-1):
+        for n in range(n_layer - 1):
             i_size_l = nodes[n]
-            NN = Dense(i_size_l, activation='relu',
-                        use_bias=True, kernel_regularizer=regularizers.l2(l2_reg))
+            NN = Dense(
+                i_size_l,
+                activation='relu',
+                use_bias=True,
+                kernel_regularizer=regularizers.l2(l2_reg))
             NNelement.append(NN)
             NN = Dropout(dropout_fraction)
             NNelement.append(NN)
@@ -80,57 +112,76 @@ def sapt_net(sym_input, aname, inputdir, energy, elec, exch, ind, disp,
         NN = Dense(i_size_l, kernel_regularizer=regularizers.l2(l2_reg))
         NNelement.append(NN)
         NNunique.append(NNelement)
-    
-    NNtotal=[]
-    inputs=[]
+
+    NNtotal = []
+    inputs = []
     for i_atom in range(len(aname[0])):
         itype = atype[0][i_atom]
         typeNN = NNff.element_force_field[aname[0][i_atom]]
-        i_size = len(typeNN.radial_symmetry_functions) + len(typeNN.angular_symmetry_functions)
-        atom_input = Input(shape=(i_size,))
-    
-        NNatom=[]
+        i_size = len(typeNN.radial_symmetry_functions) + len(
+            typeNN.angular_symmetry_functions)
+        atom_input = Input(shape=(i_size, ))
+
+        NNatom = []
         #print(NNunique)
         for i_layer in range(len(NNunique[0])):
-            if i_layer == 0 :
+            if i_layer == 0:
                 layer = NNunique[itype][i_layer](atom_input)
-            else :
+            else:
                 if "Dropout" not in str(NNunique[itype][i_layer]):
                     layer = NNunique[itype][i_layer](layer)
                 else:
-                    layer = NNunique[itype][i_layer](layer) #, training=True)
+                    layer = NNunique[itype][i_layer](layer)  #, training=True)
         inputs.append(atom_input)
         NNtotal.append(layer)
-    
-    component_predictions = add(NNtotal)
-    elst_tensor = Lambda(lambda component_predictions: K.tf.gather(component_predictions,[0],axis=1),
-                            output_shape=(1,))(component_predictions)
-    exch_tensor = Lambda(lambda component_predictions: K.tf.gather(component_predictions,[1],axis=1),
-                            output_shape=(1,))(component_predictions)
-    ind_tensor = Lambda(lambda component_predictions: K.tf.gather(component_predictions,[2],axis=1),
-                            output_shape=(1,))(component_predictions)
-    disp_tensor = Lambda(lambda component_predictions: K.tf.gather(component_predictions,[3],axis=1),
-                            output_shape=(1,))(component_predictions)
-    total_predictions = add([elst_tensor,exch_tensor,ind_tensor,disp_tensor])
-    predictions = concatenate([total_predictions,component_predictions])
 
-    model = Model(inputs=inputs, outputs=[total_predictions,elst_tensor,exch_tensor,ind_tensor,disp_tensor])
-    model.compile(optimizer='adam', loss ="mean_squared_error", metrics=['mae'],loss_weights=multitarget_vec)
+    component_predictions = add(NNtotal)
+    elst_tensor = Lambda(
+        lambda component_predictions: K.tf.gather(
+            component_predictions, [0], axis=1),
+        output_shape=(1, ))(component_predictions)
+    exch_tensor = Lambda(
+        lambda component_predictions: K.tf.gather(
+            component_predictions, [1], axis=1),
+        output_shape=(1, ))(component_predictions)
+    ind_tensor = Lambda(
+        lambda component_predictions: K.tf.gather(
+            component_predictions, [2], axis=1),
+        output_shape=(1, ))(component_predictions)
+    disp_tensor = Lambda(
+        lambda component_predictions: K.tf.gather(
+            component_predictions, [3], axis=1),
+        output_shape=(1, ))(component_predictions)
+    total_predictions = add(
+        [elst_tensor, exch_tensor, ind_tensor, disp_tensor])
+    predictions = concatenate([total_predictions, component_predictions])
+
+    model = Model(
+        inputs=inputs,
+        outputs=[
+            total_predictions, elst_tensor, exch_tensor, ind_tensor,
+            disp_tensor
+        ])
+    model.compile(
+        optimizer='adam',
+        loss="mean_squared_error",
+        metrics=['mae'],
+        loss_weights=multitarget_vec)
     t2 = time.time()
-    elapsed = math.floor(t2-t1)
-    print("Neural network model created and compiled in %s seconds\n"%elapsed)
-    
-    
-    print( "Fitting neural network to property data...\n")
+    elapsed = math.floor(t2 - t1)
+    print(
+        "Neural network model created and compiled in %s seconds\n" % elapsed)
+
+    print("Fitting neural network to property data...\n")
     t1 = time.time()
-    
+
     history = model.fit(X_train, y_train, batch_size=batch_size, epochs=epochs)
     t2 = time.time()
-    elapsed = math.floor((t2-t1)/60.0)
-    print("Neural network fit in %s minutes\n"%elapsed)
-     
+    elapsed = math.floor((t2 - t1) / 60.0)
+    print("Neural network fit in %s minutes\n" % elapsed)
+
     model.summary()
-    
+
     test_en = y_test[0]
     test_elec = y_test[1]
     test_exch = y_test[2]
@@ -141,25 +192,34 @@ def sapt_net(sym_input, aname, inputdir, energy, elec, exch, ind, disp,
     exch_pred = np.zeros(len(y_test))
     ind_pred = np.zeros(len(y_test))
     disp_pred = np.zeros(len(y_test))
-    (energy_pred, elec_pred, exch_pred, ind_pred, disp_pred) = model.predict_on_batch(X_test)
-    model.save("%s_model.h5"%inputdir)
-    scores = model.evaluate(X_test,y_test,verbose=0)
+    (energy_pred, elec_pred, exch_pred, ind_pred,
+     disp_pred) = model.predict_on_batch(X_test)
+    model.save("%s_model.h5" % inputdir)
+    scores = model.evaluate(X_test, y_test, verbose=0)
     print("%s: %.2f" % (model.metrics_names[1], scores[1]))
     val_scores.append(scores[1])
 
-    print("%.2f (+/-) %.2f" %(np.mean(val_scores), np.std(val_scores)))
-    return model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred, test_disp, disp_pred, test_ind, ind_pred, np.mean(val_scores), np.std(val_scores)
-    
+    print("%.2f (+/-) %.2f" % (np.mean(val_scores), np.std(val_scores)))
+    return model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred, test_disp, disp_pred, test_ind, ind_pred, np.mean(
+        val_scores), np.std(val_scores)
 
-def sapt_errors(energy, energy_pred, elec, elec_pred, exch, exch_pred, disp, disp_pred, ind, ind_pred):
-    en_mae, en_rmse, en_max_err = routines.error_statistics(energy,energy_pred)
-    elec_mae, elec_rmse, elec_max_err = routines.error_statistics(elec,elec_pred)
-    exch_mae, exch_rmse, exch_max_err = routines.error_statistics(exch,exch_pred)
-    disp_mae, disp_rmse, disp_max_err = routines.error_statistics(disp,disp_pred)
-    ind_mae, ind_rmse, ind_max_err = routines.error_statistics(ind,ind_pred)
 
-    return (en_mae, en_rmse, en_max_err, elec_mae, elec_rmse, elec_max_err, exch_mae, 
-        exch_rmse, exch_max_err, disp_mae, disp_rmse, disp_max_err, ind_mae, ind_rmse, ind_max_err)
+def sapt_errors(energy, energy_pred, elec, elec_pred, exch, exch_pred, disp,
+                disp_pred, ind, ind_pred):
+    """Compute standard error metrics for SAPT"""
+    en_mae, en_rmse, en_max_err = routines.error_statistics(
+        energy, energy_pred)
+    elec_mae, elec_rmse, elec_max_err = routines.error_statistics(
+        elec, elec_pred)
+    exch_mae, exch_rmse, exch_max_err = routines.error_statistics(
+        exch, exch_pred)
+    disp_mae, disp_rmse, disp_max_err = routines.error_statistics(
+        disp, disp_pred)
+    ind_mae, ind_rmse, ind_max_err = routines.error_statistics(ind, ind_pred)
+
+    return (en_mae, en_rmse, en_max_err, elec_mae, elec_rmse, elec_max_err,
+            exch_mae, exch_rmse, exch_max_err, disp_mae, disp_rmse,
+            disp_max_err, ind_mae, ind_rmse, ind_max_err)
 
 
 """
