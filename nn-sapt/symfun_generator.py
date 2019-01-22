@@ -19,7 +19,7 @@ import symfun_parameters
 
 """Generate symmetry function environmental input descriptors.
 
-"Runtime-maintained^TM" file to create symmetry functions of full datasets
+"Runtime-maintained^{TM}" file to create symmetry functions of full datasets
 for the purposes of training. Carefully utilize the DataSet object to get
 inputs for best results.
 
@@ -27,18 +27,28 @@ inputs for best results.
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 #inputdir="NMe-acetamide_Indole"
-inputdirs = ["NMA-MeOH-crystallographic"]
+inputdirs = ["Indole_10k_Training","MeOH_10k_Training","NMe-acetamide_13k_Training"]
+xyz_paths = ["./../data/XYZ-FILES/NMe-acetamide_Indole-xyzfiles",
+                "./../data/XYZ-FILES/NMe-acetamide_Don--MeOH-xyzfiles",
+                "./../data/XYZ-FILES/NMe-acetamide_NMe-acetamide-xyzfiles"]
+
 #inputdirs = ["NMe-acetamide_Indole", "NMe-acetamide_Don--1H23triazole", "NMe-acetamide_Don--Benzene", "NMe-acetamide_DonH2--134oxadiazole"]
 
-for inputdir in inputdirs:
+for i in range(len(inputdirs)):
+    inputdir = inputdirs[i]
+    xyz_path = xyz_paths[i]
     print("Scraping property, geometry data...\n")
     t1 = time.time()
+
+    
     #(aname, xyz, energy, atom_tensor, en_units) = routines.read_QM9_data(inputdir)
 
     #data_obj = routines.DataSet("./2019-01-02-11-standard-donors-xyz-nrgs/SAPT0-NRGS-COMPONENTS/NMe-acetamide_Indole-SAPT0-NRGS-COMPONENTS.txt",None,"kcal/mol")
-    data_obj = routines.DataSet(
-        "./crystallographic_data/2018-12-26-CSD-xyznma-meoh-159/FSAPT0/SAPT0-NRGS-COMPONENTS.txt",
-        None, "kcal/mol")
+    #data_obj = routines.DataSet(
+    #    "./crystallographic_data/2018-12-26-CSD-xyznma-meoh-159/FSAPT0/SAPT0-NRGS-COMPONENTS.txt",
+    #    None, "kcal/mol")
+    
+    data_obj = routines.DataSet(xyz_path,"../data/%s.csv"%inputdir,"non-alex","kcal/mol")
 
     if data_obj.mode == "alex":
         print("alex mode engaged")
@@ -52,6 +62,14 @@ for inputdir in inputdirs:
         (aname, atom_tensor, xyz, elec, ind, disp, exch, energy,
          geom_files) = data_obj.read_from_target_list()
     #(aname, xyz, elec, exch, ind, disp, energy, atom_tensor, en_units) = routines.read_sapt_data(inputdir)
+    
+    """
+    data_obj = routines.DataSet("../data/%s"%inputdir,"../data/COMPONENT-NRG-FILES/%s.txt"%inputdir,None,"kcal/mol")
+    
+    (aname,xyz,energy,elec,
+        exch,ind,disp,geom_files) = data_obj.read_from_xyz_dir()
+    """    
+    
     t2 = time.time()
     elapsed = math.trunc(t2 - t1)
     print("Property and geometry data scraped in %s seconds\n" % elapsed)
@@ -63,14 +81,14 @@ for inputdir in inputdirs:
     else:
         path = "./%s_spatial_info" % inputdir
 
-    def compute_spatial_info(xyz, path):
+    def compute_spatial_info(xyz, path, filenames):
         print("Computing interatomic distances and angles...\n")
         t1 = time.time()
         if not os.path.isdir(path):
             os.mkdir(path)
         num_systems = len(xyz)
-        routines.compute_displacements(xyz, path)
-        routines.compute_thetas(num_systems, path)
+        routines.compute_displacements(xyz, path, filenames)
+        routines.compute_thetas(num_systems, path, filenames)
         t2 = time.time()
         elapsed = math.trunc((t2 - t1) / 60.0)
         print("%s minutes spent computing interatomic distances and angles\n" %
@@ -89,9 +107,10 @@ for inputdir in inputdirs:
         train_xyz = []
         test_xyz = []
     else:
-        compute_spatial_info(xyz, path)
+        compute_spatial_info(xyz, path, geom_files)
         atomic_num_tensor = routines.get_atomic_num_tensor(
-            atom_tensor, atom_dict)
+            aname, atom_dict)
+        print(atomic_num_tensor)
         xyz = []
     print(
         "Constructing symmetry functions from distances, angles, atomic numbers, and hyperparameters...\n"
@@ -116,7 +135,8 @@ for inputdir in inputdirs:
         routines.construct_symmetry_input(
             NNff,
             path,
-            atom_tensor,
+            geom_files,
+            aname,
             np.zeros(len(energy)),
             atomic_num_tensor,
             val_split=0)

@@ -92,7 +92,6 @@ def sapt_net(sym_input,
         y_test = np.sum(y_test, axis=1)
     print("Setting up neural networks...\n")
     t1 = time.time()
-    #print(ntype)
     for i_type in range(ntype):
         NNelement = []
         i_size_l = nodes[0]
@@ -123,7 +122,6 @@ def sapt_net(sym_input,
         atom_input = Input(shape=(i_size, ))
 
         NNatom = []
-        #print(NNunique)
         for i_layer in range(len(NNunique[0])):
             if i_layer == 0:
                 layer = NNunique[itype][i_layer](atom_input)

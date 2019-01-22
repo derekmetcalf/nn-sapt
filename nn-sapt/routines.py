@@ -32,7 +32,7 @@ class DataSet:
 
     """
 
-    def __init__(self, target_dir, mode, en_units):
+    def __init__(self, xyz_path, prop_path, mode, en_units):
         """Initialize SAPT dataset object.
 
         How not to write Python: a tutorial. This initializer includes
@@ -42,7 +42,8 @@ class DataSet:
         objects.
 
         """
-        self.target_dir = target_dir
+        self.target_dir = prop_path
+        self.xyz_path = xyz_path
         self.mode = mode
         self.en_units = en_units
         if self.mode != "alex":
@@ -406,7 +407,7 @@ class DataSet:
         """
         target_list = self.target_dir
         with open(target_list, "r") as file:
-            if self.mode == "alex": next(file)
+            if self.mode != None: next(file)
             for line in file:
                 molec = line.split(",")
                 filename = molec[0]
@@ -418,13 +419,18 @@ class DataSet:
                     elif "All_conf" in set_code:
                         train_data = False
                 system_name = molec[0].split("_")[0] + "_" + molec[0].split(
-                    "_")[1]
-                if self.mode != "alex":
-                    geom_file = "./crystallographic_data/2019-01-07-CSD-NMA-NMA-xyz-nrgs-outs/XYZ/%s.xyz" % (
+                                "_")[1]
+                if self.mode == None:
+                    geom_file = "../data/crystallographic_data/2019-01-05-CSD-NMA-Aniline-xyz-nrgs-outs/XYZ/%s.xyz" % (
                         filename)
-                else:
-                    geom_file = "./XYZ-FILES/%s-xyzfiles/%s.xyz" % (
+                elif self.mode == "alex":
+                    geom_file = "../data/XYZ-FILES/%s-xyzfiles/%s.xyz" % (
                         system_name, filename.replace(".trunc.out", ""))
+                else:
+                    system_name = target_list.split("/")[-1].split("_")[0]
+                    geom_file = "%s/%s.xyz" % (
+                        self.xyz_path, 
+                        filename.replace(".trunc.out", "").replace("\"",""))
                 if os.path.exists(geom_file):
                     geom = open(geom_file, "r")
                     line_num = 0
@@ -503,7 +509,69 @@ class DataSet:
                     self.training_elec, self.training_ind, self.training_disp,
                     self.training_exch, self.training_energy,
                     self.training_geom_files)
+    
+    def read_from_xyz_dir(self):
+        (self.xyz, self.aname, self.geom_files) = get_xyzs_from_dir(self.target_dir)
+        (self.energy, self.elec, self.exch,
+            self.ind, self.disp) = get_energies_from_list(self.prop_path,
+                                                            self.geom_files)
+    
+        return (self.aname, self.xyz, self.energy,
+                self.elec, self.exch, self.ind, self.disp,
+                self.geom_files)
 
+
+def get_energies_from_list(file_path, target_files):
+    """Scrape energies given a list of target files and a path to 
+    a file listing their energy.
+
+    """
+    files_searched = 0
+    tot = []
+    elst = []
+    exch = []
+    ind = []
+    disp = []
+    with open(file_path, "r") as infile:
+        for target_file in target_files:
+            files_searched += 1
+            match_name = target_file + ".trunc.out"
+            for line in infile:
+                data = line.split(",")
+                if match_name in data:
+                    tot.append(data[1])
+                    elst.append(data[2])
+                    exch.append(data[3])
+                    ind.append(data[4])
+                    disp.append(data[5])
+            if len(tot) != files_searched:
+                print("Couldn't find file")
+                quit()
+    return tot,elst,exch,ind,disp            
+
+def get_xyzs_from_dir(directory):
+    """Given a directory with xyz files, scrape and return all data in lists"""
+    xyz = []
+    file_list = []
+    aname = []
+    for filename in os.listdir(directory):
+        file_list.append(filename.replace(".xyz",""))
+        with open("%s/%s"%(directory,filename), "r") as infile:
+            linenum=0
+            molec_xyz = []
+            molec_aname = []
+            for line in infile:
+                if linenum>1 and len(line.split()) == 4:
+                    data = line.split()
+                    molec_aname.append(data[0])
+                    molec_xyz.append([data[1],data[2],data[3]])
+                linenum += 1
+        infile.close()
+        aname.append(molec_aname)
+        xyz.append(molec_xyz)
+    print(len(xyz))
+    print("Got xyzs & file names")
+    return xyz, aname, file_list
 
 def progress(count, total, suffix=''):
     """Print a rolling progress bar to standard out."""
@@ -610,17 +678,17 @@ def create_atype_list(aname, atomic_dict):
     return ntype, atype
 
 
-def compute_displacements(xyz, path):
+def compute_displacements(xyz, path, filenames):
     """Compute displacement tensor from input cartesian coordinates."""
     Parallel(
-        n_jobs=4, verbose=1)(delayed(displacement_matrix)(xyz[i], path, i)
+        n_jobs=4, verbose=1)(delayed(displacement_matrix)(xyz[i], path, i, filenames[i])
                              for i in range(len(xyz)))
     #for i in range(len(xyz)):
     #    displacement_matrix(xyz[i],path,i)
     return
 
 
-def displacement_matrix(xyz, path, i):
+def displacement_matrix(xyz, path, i, filename):
     """Compute displacement matrix for all atoms in a molecule.
 
     This matrix is size len(xyz) * len(xyz) and saves Euclidian 
@@ -629,8 +697,8 @@ def displacement_matrix(xyz, path, i):
     """
     molec_rij = []
     molec_dr = []
-    rij_out = "%s/rij_%s.npy" % (path, i)
-    dr_out = "%s/dr_%s.npy" % (path, i)
+    rij_out = "%s/%s_rij.npy" % (path, filename)
+    dr_out = "%s/%s_dr.npy" % (path, filename)
     # first loop over atoms
     for i_atom in range(len(xyz)):
         atom_rij = []
@@ -644,21 +712,19 @@ def displacement_matrix(xyz, path, i):
             atom_rij.append(LA.norm([x_diff, y_diff, z_diff]))
         molec_dr.append(atom_dr)
         molec_rij.append(atom_rij)
-    #rij.append(molec_rij)
-    #dr.append(molec_dr)
     np.save(rij_out, np.array(molec_rij))
     np.save(dr_out, np.array(molec_dr))
 
 
-def compute_thetas(num_systems, path):
+def compute_thetas(num_systems, path, filenames):
     """Compute theta tensor from displacement tensor in parallel."""
     Parallel(
         n_jobs=4, verbose=1)(
-            delayed(theta_tensor_single)(path, i) for i in range(num_systems))
+            delayed(theta_tensor_single)(path, i, filenames[i]) for i in range(num_systems))
     return
 
 
-def theta_tensor_single(path, i):
+def theta_tensor_single(path, i, filename):
     """Compute individual theta tensor and save to file.
 
     This function is called by compute_thetas for a single-molecule angle
@@ -667,9 +733,9 @@ def theta_tensor_single(path, i):
 
     """
     molec_theta = []
-    outfile = "%s/theta_%s.npy" % (path, i)
-    rij = np.load("%s/rij_%s.npy" % (path, i))
-    dr = np.load("%s/dr_%s.npy" % (path, i))
+    outfile = "%s/%s_theta.npy" % (path, filename)
+    rij = np.load("%s/%s_rij.npy" % (path, filename))
+    dr = np.load("%s/%s_dr.npy" % (path, filename))
     for i_atom in range(len(rij)):
         atom_theta = []
         for j_atom in range(len(rij)):
@@ -692,8 +758,8 @@ def theta_tensor_single(path, i):
     np.save(outfile, np.array(molec_theta))
     return
 
-def construct_symmetry_input(NN, path, aname, ffenergy, atomic_num_tensor,
-                             val_split):
+def construct_symmetry_input(NN, path, filenames, aname, ffenergy, 
+                                atomic_num_tensor, val_split):
     """Construct symmetry function input for given dataset.
  
     NOTE: We assume we are using a shared layer NN structure, where
@@ -715,7 +781,7 @@ def construct_symmetry_input(NN, path, aname, ffenergy, atomic_num_tensor,
     os.mkdir(sym_path)
     Parallel(
         n_jobs=4, verbose=1)(delayed(sym_inp_single)(
-            sym_path, path, j_molec, aname, NN, atomic_num_tensor[j_molec])
+            sym_path, path, filenames[j_molec], j_molec, aname, NN, atomic_num_tensor[j_molec])
                              for j_molec in range(len(aname)))
     #sym_input = []
     #for j_molec in range(len(aname)): #loop over all molecules in dataset
@@ -724,11 +790,11 @@ def construct_symmetry_input(NN, path, aname, ffenergy, atomic_num_tensor,
     return
 
 
-def sym_inp_single(sym_path, path, j_molec, aname, NN, atomic_num_slice):
+def sym_inp_single(sym_path, path, filename, j_molec, aname, NN, atomic_num_slice):
     """Compute symmetry function nested lists for a single molecule."""
-    outfile = "%s/symfun_%s.npy" % (sym_path, j_molec)
-    rij = np.load("%s/rij_%s.npy" % (path, j_molec))
-    theta = np.load("%s/theta_%s.npy" % (path, j_molec))
+    outfile = "%s/%s_symfun.npy" % (sym_path, filename)
+    rij = np.load("%s/%s_rij.npy" % (path, filename))
+    theta = np.load("%s/%s_theta.npy" % (path, filename))
     input_atom = []
 
     for i_atom in range(len(

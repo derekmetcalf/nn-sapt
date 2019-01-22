@@ -26,7 +26,6 @@ def radial_gaussian(rij, i_atom, width, rshift, Rc, Zi):
         fc = cutoff_function(rij[i_atom][j_atom], Rc)
         Gi = Gi + fc * Zi[j_atom] * np.exp(-width *
                                            (rij[i_atom][j_atom] - rshift)**2)
-        #print( j_atom , Gi )
     return Gi
 
 

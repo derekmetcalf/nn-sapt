@@ -28,38 +28,16 @@ nature of the required evaluation. Do not run this blindly.
 """
 
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
-inputdir="NMe-acetamide_DonHa--NMe-urea"
-
-print("Collecting properties and geometries...\n")
-t1 = time.time()
-NNff = NNforce_field('GA_opt',0,0)
-data_obj = routines.DataSet("./Final_Sampling_Alex/%s_Step_4_AlexSampling.csv"%inputdir,"alex","kcal/mol")
-(testing_aname,testing_atom_tensor,testing_xyz,
-                testing_elec,testing_ind,testing_disp,
-                testing_exch,testing_energy,
-                aname,atom_tensor,xyz,
-                elec,ind,disp,exch,
-                energy) = data_obj.read_from_target_list()
-#for i in range(len(aname[0])):
-#    print(aname[0][i])
-
-t2 = time.time()
-elapsed = math.floor(t2-t1)
-print("Properties and geometries collected in %s seconds\n"%elapsed)
-
-
-
-def evaluate_model(model, inputdir, testing_files, testing_energy,
+def evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
                    testing_elec, testing_exch, testing_ind, testing_disp):
     """Evaluate NN-SAPT model for accuracy and write the results."""
     print("Loading symmetry functions from file...\n")
     t1 = time.time()
-    sym_dir = "%s_sym_inp" % inputdir
+    sym_dir = "../data/%s_sym_inp" % inputdir
     sym_input = []
     for i in range(
             len([
-                name for name in os.listdir("./%s" % sym_dir)
+                name for name in os.listdir("%s" % sym_dir)
                 if os.path.isfile(os.path.join(sym_dir, name))
             ])):
         sym_input.append(np.load(os.path.join(sym_dir, "symfun_%s.npy" % i)))
@@ -72,13 +50,9 @@ def evaluate_model(model, inputdir, testing_files, testing_energy,
     elapsed = math.floor(t2 - t1)
     print("Symmetry functions loaded in %s seconds\n" % elapsed)
 
-    #model = load_model("%s_model.h5"%inputdir)
-
     (energy_pred, elec_pred, exch_pred, ind_pred,
      disp_pred) = routines.infer_on_test(model, sym_input)
     print("Inferred on inputs")
-    print(energy_pred[0])
-    print(energy_pred[1])
 
     energy_pred = np.array(np.array(energy_pred).T[0])
     elec_pred = np.array(np.array(elec_pred).T[0])
@@ -125,8 +99,31 @@ def evaluate_model(model, inputdir, testing_files, testing_energy,
             float(disp_pred[i])
         ]
         csv_file.append(line)
-    with open('%s_test_eval.csv' % (inputdir), 'w') as writeFile:
+    with open('../results/%s.csv' % (results_name), 'w') as writeFile:
         writer = csv.writer(writeFile)
         writer.writerows(csv_file)
     writeFile.close()
     return
+
+if __name__ == "__main__":
+    os.environ["CUDA_VISIBLE_DEVICES"]="0"
+    inputdir="NMe-acetamide_Don--Aniline"
+    
+    print("Collecting properties and geometries...\n")
+    t1 = time.time()
+    NNff = NNforce_field('GA_opt',0,0)
+    data_obj = routines.DataSet("../data/Final_Sampling_Alex/%s_Step_4_AlexSampling.csv"%inputdir,"xyzdir","alex","kcal/mol")
+    (testing_aname,testing_atom_tensor,testing_xyz,
+                    testing_elec,testing_ind,testing_disp,
+                    testing_exch,testing_energy,
+                    testing_geom_files,aname,atom_tensor,xyz,
+                    elec,ind,disp,exch,
+                    energy,geom_files) = data_obj.read_from_target_list()
+    
+    model = load_model("%s_model.h5"%inputdir)
+    #for i in range(len(aname[0])):
+    #    print(aname[0][i])
+    
+    t2 = time.time()
+    elapsed = math.floor(t2-t1)
+    print("Properties and geometries collected in %s seconds\n"%elapsed)
