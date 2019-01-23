@@ -23,7 +23,7 @@ from symfun_parameters import *
 
 def sapt_net(sym_input,
              aname,
-             inputdir,
+             results_name,
              energy,
              elec,
              exch,
@@ -192,7 +192,7 @@ def sapt_net(sym_input,
     disp_pred = np.zeros(len(y_test))
     (energy_pred, elec_pred, exch_pred, ind_pred,
      disp_pred) = model.predict_on_batch(X_test)
-    model.save("%s_model.h5" % inputdir)
+    model.save("%s_model.h5" % results_name)
     scores = model.evaluate(X_test, y_test, verbose=0)
     print("%s: %.2f" % (model.metrics_names[1], scores[1]))
     val_scores.append(scores[1])

@@ -32,7 +32,7 @@ for their purposes.
 
 
 #train 1 net as specified
-def standard_run(sym_input,aname,inputdir,energy,elec,exch,
+def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
                 ind,disp,n_layer,nodes,mt_vec,val_split,
                 dropout_fraction,l2_reg,epochs, results_name):
     (model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
@@ -89,215 +89,23 @@ def standard_run(sym_input,aname,inputdir,energy,elec,exch,
         writer = csv.writer(writeFile)
         writer.writerows(csv_file)
     writeFile.close()
-    """
-    data_obj = routines.DataSet("../data/crystallographic_data/2019-01-05-CSD-NMA-Aniline-xyz-nrgs-outs/FSAPT0/SAPT0-NRGS-COMPONENTS.txt",None,"kcal/mol")
+    """ 
+    test_xyz_path = None
+    data_obj = routines.DataSet(test_xyz_path,"../data/crystallographic_data/2019-01-05-CSD-NMA-Aniline-xyz-nrgs-outs/FSAPT0/SAPT0-NRGS-COMPONENTS.txt",None,"kcal/mol")
     (_aname,_atom_tensor,_xyz,testing_elec,testing_ind,testing_disp,testing_exch,
                 testing_energy,geom_files) = data_obj.read_from_target_list()
-    print(geom_files)
     model_tests.evaluate_model(model, "NMA-Aniline-crystallographic", geom_files, results_name, testing_energy, testing_elec, testing_exch, testing_ind, testing_disp)
     K.clear_session()
     """
-
-
-#saturation curve
-if False:
-    data_fraction = [0.8, 0.6, 0.4, 0.2, 0.1]
-
-    for frac in data_fraction:
-        (test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
-         test_disp, disp_pred, test_ind, ind_pred, avg_mae,
-         std_mae) = sapt_net.sapt_net(
-             sym_input,
-             aname,
-             inputdir,
-             energy,
-             elec,
-             exch,
-             ind,
-             disp,
-             n_layer,
-             nodes,
-             val_split=(1 - frac),
-             data_fraction=(1 - frac),
-             dropout_fraction=dropout_fraction,
-             l2_reg=l2_reg,
-             epochs=epochs)
-        (en_mae, en_rmse, en_max_err, elec_mae, elec_rmse, elec_max_err,
-         exch_mae, exch_rmse, exch_max_err, disp_mae, disp_rmse, disp_max_err,
-         ind_mae, ind_rmse, ind_max_err) = sapt_net.sapt_errors(
-             test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
-             test_disp, disp_pred, test_ind, ind_pred)
-        csv_file = []
-        line = [
-            "Sample from %s data ensemble, which had avg MAE %s Std Dev %s. This network has MAE %s."
-            % (frac, avg_mae, std_mae, en_mae)
-        ]
-        csv_file.append(line)
-        line = [
-            'energy', ' energy_pred', ' elec', ' elec_pred', ' exch',
-            ' exch_pred', ' ind', ' ind_pred', ' disp', ' disp_pred'
-        ]
-        csv_file.append(line)
-        for i in range(len(energy_pred)):
-            line = [
-                test_en[i], energy_pred[i], test_elec[i], elec_pred[i],
-                test_exch[i], exch_pred[i], test_ind[i], ind_pred[i],
-                test_disp[i], disp_pred[i]
-            ]
-            csv_file.append(line)
-        with open('%s_%s.csv' % (inputdir, frac), 'w') as writeFile:
-            writer = csv.writer(writeFile)
-            writer.writerows(csv_file)
-        writeFile.close()
-
-#fitting total E vs fitting components
-if False:
-    (test_en, energy_pred, avg_mae, std_mae) = sapt_net.sapt_net(
-        sym_input,
-        aname,
-        inputdir,
-        energy,
-        elec,
-        exch,
-        ind,
-        disp,
-        n_layer,
-        nodes,
-        val_split=val_split,
-        data_fraction=(1 - val_split),
-        dropout_fraction=dropout_fraction,
-        l2_reg=l2_reg,
-        epochs=epochs,
-        batch_size=32,
-        total_en_mode=True)
-    csv_file = []
-    line = [
-        "Sample from %s data ensemble fitting TOTAL ENERGIES which had avg MAE %s Std Dev %s"
-        % ((1 - val_split), avg_mae, std_mae)
-    ]
-    csv_file.append(line)
-    line = ['energy', ' energy_pred']
-    csv_file.append(line)
-    for i in range(len(energy_pred)):
-        line = [test_en[i], energy_pred[i]]
-        csv_file.append(line)
-    with open('%s_%s_total_fits.csv' % (inputdir, (1 - val_split)),
-              'w') as writeFile:
-        writer = csv.writer(writeFile)
-        writer.writerows(csv_file)
-    writeFile.close()
-
-    (test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
-     test_disp, disp_pred, test_ind, ind_pred, avg_mae,
-     std_mae) = sapt_net.sapt_net(
-         sym_input,
-         aname,
-         inputdir,
-         energy,
-         elec,
-         exch,
-         ind,
-         disp,
-         n_layer,
-         nodes,
-         val_split=val_split,
-         data_fraction=(1 - val_split),
-         dropout_fraction=dropout_fraction,
-         l2_reg=l2_reg,
-         epochs=epochs,
-         batch_size=32)
-
-    (en_mae, en_rmse, en_max_err, elec_mae, elec_rmse, elec_max_err, exch_mae,
-     exch_rmse, exch_max_err, disp_mae, disp_rmse, disp_max_err,
-     ind_mae, ind_rmse, ind_max_err) = sapt_net.sapt_errors(
-         test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
-         test_disp, disp_pred, test_ind, ind_pred)
-
-    csv_file = []
-    line = [
-        "Sample from %s data ensemble fitting COMPONENT ENERGIES which had avg MAE %s Std Dev %s. This network has MAE %s."
-        % ((1 - val_split), avg_mae, std_mae, en_mae)
-    ]
-    csv_file.append(line)
-    line = ['energy', ' energy_pred']
-    csv_file.append(line)
-    for i in range(len(energy_pred)):
-        line = [test_en[i], energy_pred[i]]
-        csv_file.append(line)
-    with open('%s_%s_component_fits.csv' % (inputdir, (1 - val_split)),
-              'w') as writeFile:
-        writer = csv.writer(writeFile)
-        writer.writerows(csv_file)
-    writeFile.close()
-
-#error by varying layers and nodes
-if False:
-    for layers in [2, 3, 4]:
-        nodes = []
-        for num in [100, 200, 300]:
-            for i in range(layers):
-                nodes.append(num)
-
-            (test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
-             test_disp, disp_pred, test_ind, ind_pred, avg_mae,
-             std_mae) = sapt_net.sapt_net(
-                 sym_input,
-                 aname,
-                 inputdir,
-                 energy,
-                 elec,
-                 exch,
-                 ind,
-                 disp,
-                 n_layer=layers,
-                 nodes=nodes,
-                 val_split=val_split,
-                 data_fraction=(1 - val_split),
-                 dropout_fraction=dropout_fraction,
-                 l2_reg=l2_reg,
-                 epochs=150,
-                 batch_size=32)
-
-            (en_mae, en_rmse, en_max_err, elec_mae, elec_rmse, elec_max_err,
-             exch_mae, exch_rmse, exch_max_err, disp_mae, disp_rmse,
-             disp_max_err, ind_mae,
-             ind_rmse, ind_max_err) = sapt_net.sapt_errors(
-                 test_en, energy_pred, test_elec, elec_pred, test_exch,
-                 exch_pred, test_disp, disp_pred, test_ind, ind_pred)
-
-            csv_file = []
-            line = [
-                "Sample from %s data ensemble fitting COMPONENT ENERGIES which had avg MAE %s Std Dev %s. This network has MAE %s."
-                % ((1 - val_split), avg_mae, std_mae, en_mae)
-            ]
-            csv_file.append(line)
-            line = [
-                'energy', ' energy_pred', ' elec', ' elec_pred', ' exch',
-                ' exch_pred', ' ind', ' ind_pred', ' disp', ' disp_pred'
-            ]
-            csv_file.append(line)
-            for i in range(len(energy_pred)):
-                line = [
-                    test_en[i], energy_pred[i], test_elec[i], elec_pred[i],
-                    test_exch[i], exch_pred[i], test_ind[i], ind_pred[i],
-                    test_disp[i], disp_pred[i]
-                ]
-                csv_file.append(line)
-            with open('%s_%s_%s_att2.csv' % (inputdir, num, layers),
-                      'w') as writeFile:
-                writer = csv.writer(writeFile)
-                writer.writerows(csv_file)
-            writeFile.close()
-            nodes = []
 
 if __name__ == "__main__":
     
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     inputdirs = ["Aniline_10k_Training", "Indole_10k_Training", "MeOH_10k_Training", "NMe-acetamide_13k_Training"]
-    xyz_paths = ["../data/XYZ-FILES/NMe-acetamide_Don--Aniline-xyzfiles",
-                "../data/XYZ-FILES/NMe-acetamide_Indole-xyzfiles",
-                "../data/XYZ-FILES/NMe-acetamide_Don--MeOH-xyzfiles",
-                "../data/XYZ-FILES/NMe-acetamide_NMe-acetamide-xyzfiles"]
+    xyz_paths = ["../data/NMA_Aniline_Step_4",
+                "../data/NMA_Indole_Step_4",
+                "../data/NMA_MeOH_Step_4",
+                "../data/NMA_NMA_Step_4"]
 
     for i in range(len(inputdirs)):
         sym_input = []
@@ -320,11 +128,11 @@ if __name__ == "__main__":
         #     energy, geom_files) = data_obj.read_from_target_list()
         #for i in range(len(aname[0])):
         #    print(aname[0][i])
-    
+        
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
         print("Properties and geometries collected in %s seconds\n" % elapsed)
-    
+        
         print("Loading symmetry functions from file...\n")
         t1 = time.time()
         sym_dir = "../data/%s_sym_inp" % inputdir
@@ -335,26 +143,27 @@ if __name__ == "__main__":
         #        ])):
         for name in geom_files:
             sym_input.append(np.load("%s_symfun.npy"%os.path.join(sym_dir, name)))
-    
-        #sym_input = routines.scale_symmetry_input(sym_input)
-    
+        
+        sym_input = routines.scale_symmetry_input(sym_input)
+        
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
         print("Symmetry functions loaded in %s seconds\n" % elapsed)
         
         dropout_fraction = 0.05
         l2_reg = 0.01
-        nodes = [75, 75]
+        nodes = [200, 200]
         val_split = 0.01
         epochs = 100
         n_layer = len(nodes)
-        mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
-        results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-        standard_run(sym_input,aname,inputdir,energy,elec,exch,
-                        ind,disp,n_layer,nodes,mt_vec,val_split,
-                        dropout_fraction,l2_reg,epochs,results_name)
-        #for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
-        #    mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
-        #    results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-        #    standard_run(sym_input,aname,inputdir,energy,elec,exch,
-        #                 ind,disp,n_layer,nodes,mt_vec,val_split,dropout_fraction,l2_reg,epochs,results_name)
+        #mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
+        #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
+        #standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
+        #                ind,disp,n_layer,nodes,mt_vec,val_split,
+        #                dropout_fraction,l2_reg,epochs,results_name)
+        for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+            mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
+            results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
+            standard_run(sym_input,aname,results_name,geom_files,energy,
+                         elec,exch,ind,disp,n_layer,nodes,mt_vec,val_split,   
+                         dropout_fraction,l2_reg,epochs,results_name)

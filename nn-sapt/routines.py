@@ -421,8 +421,8 @@ class DataSet:
                 system_name = molec[0].split("_")[0] + "_" + molec[0].split(
                                 "_")[1]
                 if self.mode == None:
-                    geom_file = "../data/crystallographic_data/2019-01-05-CSD-NMA-Aniline-xyz-nrgs-outs/XYZ/%s.xyz" % (
-                        filename)
+                    #geom_file = "../data/crystallographic_data/NMA-NMA-xyz-nrgs/XYZ/%s.xyz" % (filename)
+                    geom_file = "%s/%s"%(self.xyz_path,filename.replace(".out",".out.xyz"))
                 elif self.mode == "alex":
                     geom_file = "../data/XYZ-FILES/%s-xyzfiles/%s.xyz" % (
                         system_name, filename.replace(".trunc.out", ""))

@@ -107,23 +107,25 @@ def evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
 
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
-    inputdir="NMe-acetamide_Don--Aniline"
+    
+    system = "NMA-MeOH"
+    inputdir="%s-crystallographic"%system
+    #xyz_path = "../data/XYZ-FILES/NMe-acetamide_Don--Aniline-xyzfiles"
     
     print("Collecting properties and geometries...\n")
     t1 = time.time()
     NNff = NNforce_field('GA_opt',0,0)
-    data_obj = routines.DataSet("../data/Final_Sampling_Alex/%s_Step_4_AlexSampling.csv"%inputdir,"xyzdir","alex","kcal/mol")
-    (testing_aname,testing_atom_tensor,testing_xyz,
-                    testing_elec,testing_ind,testing_disp,
-                    testing_exch,testing_energy,
-                    testing_geom_files,aname,atom_tensor,xyz,
-                    elec,ind,disp,exch,
-                    energy,geom_files) = data_obj.read_from_target_list()
-    
-    model = load_model("%s_model.h5"%inputdir)
-    #for i in range(len(aname[0])):
-    #    print(aname[0][i])
+    data_obj = routines.DataSet("../data/crystallographic_data/%s-xyz-nrgs/XYZ"%system,"../data/crystallographic_data/%s-xyz-nrgs/FSAPT0/SAPT0-NRGS-COMPONENTS.txt"%system,None,"kcal/mol")
+
+    (aname,atom_tensor,xyz,testing_elec,testing_ind,testing_disp,testing_exch,testing_energy,testing_files) = data_obj.read_from_target_list()
     
     t2 = time.time()
     elapsed = math.floor(t2-t1)
     print("Properties and geometries collected in %s seconds\n"%elapsed)
+    
+    model = load_model("../data/NMe-acetamide_Don--MeOH_model.h5")
+    results_name = "step_4_testing_%s"%inputdir
+    evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
+                   testing_elec, testing_exch, testing_ind, testing_disp)
+     
+
