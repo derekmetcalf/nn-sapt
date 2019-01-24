@@ -24,253 +24,37 @@ class DataSet:
     
     """Create data set object for arbitrary SAPT data collections.
 
-    This class is very fidgety and has lots of great artifacts 
-    like "alex mode" to include handling for certain obscure cases. 
-    Almost any dataset format that has not been explicitly coded into
-    this class either needs a new custom method or a generalization 
-    of an old method.
+    This class is very fidgety and has lots of artifacts 
+    to include handling for certain obscure cases. Almost any dataset 
+    format that has not been explicitly coded into this class either 
+    needs a new custom method or a generalization of an old method.
 
     """
 
-    def __init__(self, xyz_path, prop_path, mode, en_units):
+    def __init__(self, path):
         """Initialize SAPT dataset object.
 
-        How not to write Python: a tutorial. This initializer includes
+        How not to write Python: a tutorial. This constructor includes
         suitable tensors for usual SAPT neural network training tasks.
         Additions should be made with great consideration about the
         data source, since there is minimal handling for erroneous
         objects.
 
         """
-        self.target_dir = prop_path
-        self.xyz_path = xyz_path
-        self.mode = mode
-        self.en_units = en_units
-        if self.mode != "alex":
-            self.aname = []
-            self.atom_tensor = []
-            self.xyz = []
-            self.elec = []
-            self.ind = []
-            self.disp = []
-            self.exch = []
-            self.delHF = []
-            self.energy = []
-            self.geom_files = []
-        elif self.mode == "alex":
-            self.training_aname = []
-            self.training_atom_tensor = []
-            self.training_xyz = []
-            self.training_elec = []
-            self.training_ind = []
-            self.training_disp = []
-            self.training_exch = []
-            self.training_delHF = []
-            self.training_energy = []
-            self.training_geom_files = []
-            self.testing_aname = []
-            self.testing_atom_tensor = []
-            self.testing_xyz = []
-            self.testing_elec = []
-            self.testing_ind = []
-            self.testing_disp = []
-            self.testing_exch = []
-            self.testing_delHF = []
-            self.testing_energy = []
-            self.testing_geom_files = []
-
-    def read_SSI(inputfile):
-        """Read SSI geometries with energy labels."""
-
-        self.ssi_data = pd.DataFrame(sapt_SSI.sapt_data())
-
-        f = open(inputfile, "r")
-        geom_mode = 0
-        for line in f:
-            if "GEOS[" in line:
-                self.dimername = line.split("'")[3]
-                self.temp_xyz = []
-                geom_line = 0
-            if line[:
-                    1] == "C " or line[:
-                                       1] == "H " or line[:
-                                                          1] == "O " or line[:
-                                                                             1] == "N " or line[:
-                                                                                                1] == "S ":
-                self.this_line = line.split(" ")
-        return
-
-    def read_pdb_sapt_data(inputfile):
-        """Read and parse SAPT data from PDB files."""
-
-        file = open(inputfile)
-        for line in file:
-            # atoms first molecule
-            atoms = int(line.rstrip())
-
-            # empty list for this dimer
-            dimeraname = []
-            dimerxyz = []
-            dimerxyzD = []
-            # first molecule
-            for i in range(atoms):
-                line = file.readline()
-                data = line.split()
-                # add xyz to dimer list
-                dimeraname.append(data[0])
-                dimerxyz.append(
-                    [float(data[1]),
-                     float(data[2]),
-                     float(data[3])])
-            # pop dummy atom off list
-            dimeraname.pop()
-            dimerxyz.pop()
-            # second molecule
-            line = file.readline()
-            atoms = int(line.rstrip())
-            for i in range(atoms):
-                line = file.readline()
-                data = line.split()
-                # add xyz to dimer list
-                dimeraname.append(data[0])
-                dimerxyz.append(
-                    [float(data[1]),
-                     float(data[2]),
-                     float(data[3])])
-            # pop dummy atom off list
-            dimeraname.pop()
-            dimerxyz.pop()
-            aname.append(dimeraname)
-            xyz.append(dimerxyz)
-            # now read energy SAPT terms
-            for i in range(19):
-                line = file.readline()
-                data = line.split()
-                # get piecewise energies
-                if i == 0:
-                    val = float(data[1])
-                    E1pol = val
-                elif i == 1:
-                    val = float(data[1])
-                    E1exch = val
-                elif i == 4:
-                    val = float(data[1])
-                    E2ind = val
-                elif i == 5:
-                    val = float(data[1])
-                    E2ind_exch = val
-                elif i == 7:
-                    val = float(data[1])
-                    E2disp = val
-                elif i == 9:
-                    val = float(data[1])
-                    E2disp_exch = val
-                # get delta HF energy
-                elif i == 17:
-                    val = float(data[1])
-                    dhf = val
-            E1tot = E1pol + E1exch
-            E2tot = E2ind + E2ind_exch + E2disp + E2disp_exch
-            etot = E1tot + E2tot + dhf
-            E_elec = E1pol
-            E_exch = E1exch
-            E_ind = E2ind + E2ind_exch
-            E_disp = E2disp + E2disp_exch
-            elec.append(E_elec)
-            exch.append(E_exch)
-            ind.append(E_ind)
-            disp.append(E_disp)
-            delHF.append(dhf)
-            energy.append(etot)
-        # change lists to arrays
-        xyz = np.array(xyz)
-        elec = np.array(elec)
-        exch = np.array(exch)
-        ind = np.array(ind)
-        disp = np.array(disp)
-        delHF = np.array(delHF)
-        energy = np.array(energy)
-        dimername = aname[0]
-        atom_tensor = np.asarray(aname)
-        return dimeraname, xyz, elec, exch, ind, disp, delHF, energy, atom_tensor
-
-    def scan_directory(target_directory, target_file):
-        """Scan a directory for target file"""
-        for path, dirs, files in os.walk("./%s" % target_directory):
-            for f in files:
-                if f == target_file and f is not None:
-                    file_loc = os.path.join(path, f)
-                    print(f)
-        if "file_loc" in locals():
-            return file_loc
-        if not "file_loc" in locals():
-            print("File location not found in directory")
-
-    def read_sapt_data_from_csv(csv, target_directory):
-        """Use CSV and XYZ files to collect molecular information.
-
-        Scrapes all SAPT output files in target_directory 's subdirectories.
-        Reports molecular geometries and their SAPT energy decomposition labels.
-
-        """
-        with open(csv) as f1:
-            count = 1
-            found = 0
-            for line in f1:
-                if count > 1:
-                    data = line.split(",")
-                    if grab_xyz_from_psi4out(target_directory,
-                                             data[0]) is not None:
-                        dimeraname, dimerxyz = grab_xyz_from_psi4out(
-                            target_directory, data[0])
-                        found += 1
-                        outfile_name.append(data[0])
-                        aname.append(dimeraname)
-                        xyz.append(dimerxyz)
-                        energy.append(data[1])
-                        elec.append(data[2])
-                        exch.append(data[3])
-                        ind.append(data[4])
-                        disp.append(data[5])
-                count += 1
-                print(count)
-            f1.close()
-
-        #for outfile in outfile_name:
-
-        # change lists to arrays
-        self.xyz = np.array(self.xyz)
-        self.elec = np.array(self.elec)
-        self.exch = np.array(self.exch)
-        self.ind = np.array(self.ind)
-        self.disp = np.array(self.disp)
-        self.energy = np.array(self.energy)
-        self.dimername = self.aname[0]
-        self.atom_tensor = np.asarray(self.aname)
-        return (self.dimeraname, self.xyz, self.elec, self.exch, self.ind,
-                self.disp, self.energy, self.atom_tensor, self.en_units)
-
-    def grab_xyz_from_psi4out(target_directory, outfile_name):
-        """Get XYZ values and atom names from Psi4 output files."""
-        with open(outfile_path) as f2:
-            count = 0
-            for line in f2:
-                if "Center" in line:
-                    count += 1
-                if not line.strip() and count == 1:
-                    count -= 1
-                if count == 1 and "-" not in line:
-                    data = line.split()
-                    dimeraname.append(data[0])
-                    dimerxyz.append(
-                        [float(data[1]),
-                         float(data[2]),
-                         float(data[3])])
-            f2.close()
-        return self.dimeraname, self.dimerxyz
+        self.path = path
+        self.aname = []
+        self.atom_tensor = []
+        self.xyz = []
+        self.elec = []
+        self.ind = []
+        self.disp = []
+        self.exch = []
+        self.delHF = []
+        self.energy = []
+        self.geom_files = []
 
     def read_QM9_data():
-        """Get SAPT and XYZ information from QM9 dataset.
+        """Get energy and XYZ information from QM9 dataset.
 
         Method walks through the directory containing QM9 (standard from 
         GitHub), parses files, and writes to convenient tensors.
@@ -317,87 +101,8 @@ class DataSet:
         self.atom_tensor = self.aname
         return self.dimeraname, self.xyz, self.energy, self.atom_tensor, self.en_units
 
-    def read_sapt_data(target_directory):
-        """Get SAPT information tensors from target data directory.
 
-        This method assumes the target data directory contains Psi4 FSAPT 
-        output files. It gathers component energies, geometries, and some 
-        bookkeeping items.
-
-        """
-        for root, dirs, files in os.walk("./%s" % target_directory):
-            for direc in dirs:
-                if direc != 'fsapt':
-                    #for directory_name in dirs:
-                    geom_file = "./%s/%s/fsapt/geom.xyz" % (target_directory,
-                                                            direc)
-                    if os.path.exists(geom_file):
-                        file = open(geom_file)
-                        line_num = 0
-                        dimeraname = []
-                        dimerxyz = []
-                        for line in file:
-                            if line_num > 1:
-                                data = line.split()
-                                dimeraname.append(data[0])
-                                dimerxyz.append([
-                                    float(data[1]),
-                                    float(data[2]),
-                                    float(data[3])
-                                ])
-                            line_num += 1
-                        aname.append(dimeraname)
-                        xyz.append(dimerxyz)
-                        file.close()
-                        for rd, drex, filez in os.walk(
-                                "./%s/%s" % (target_directory, direc)):
-                            for outfile in filez:
-                                if ".out" in outfile and ".swp" not in outfile:
-                                    file = open(
-                                        "./%s/%s/%s" % (target_directory,
-                                                        direc, outfile))
-                                    count = 0
-                                    for line in file:
-                                        if count > 0:
-                                            data = line.split()
-                                            if count == 3:
-                                                val = float(data[3])
-                                                E_elec = val
-                                            if count == 6:
-                                                val = float(data[3])
-                                                E_exch = val
-                                            if count == 10:
-                                                val = float(data[3])
-                                                E_ind = val
-                                            if count == 17:
-                                                val = float(data[3])
-                                                E_disp = val
-                                            count += 1
-
-                                        if "SAPT Results" in line:
-                                            count += 1
-
-                                    file.close()
-                                    elec.append(E_elec)
-                                    ind.append(E_ind)
-                                    disp.append(E_disp)
-                                    exch.append(E_exch)
-                                    etot = E_elec + E_exch + E_ind + E_disp
-                                    energy.append(etot)
-
-        # change lists to arrays
-        self.xyz = np.array(xyz)
-        self.elec = np.array(elec)
-        self.exch = np.array(exch)
-        self.ind = np.array(ind)
-        self.disp = np.array(disp)
-        self.energy = np.array(energy)
-        self.dimername = aname[0]
-        self.atom_tensor = np.asarray(aname)
-        return (self.aname, self.xyz, self.elec, self.exch, self.ind,
-                self.disp, self.energy, self.atom_tensor, self.en_units)
-
-    def read_from_target_list(self):
+    def read_sapt_from_target_dir(self):
         """Collect energies and geometries from disparate sources.
 
         This is an extreme unitask method for property scraping in strange 
@@ -405,32 +110,17 @@ class DataSet:
         or combining many data directories.
 
         """
-        target_list = self.target_dir
+        path = self.path
+
+        #add path handling here to get target_list and the xyz_path
+
         with open(target_list, "r") as file:
-            if self.mode != None: next(file)
+            next(file)
             for line in file:
                 molec = line.split(",")
                 filename = molec[0]
 
-                if self.mode == "alex":
-                    set_code = molec[8]
-                    if "Step" in set_code:
-                        train_data = True
-                    elif "All_conf" in set_code:
-                        train_data = False
-                system_name = molec[0].split("_")[0] + "_" + molec[0].split(
-                                "_")[1]
-                if self.mode == None:
-                    #geom_file = "../data/crystallographic_data/NMA-NMA-xyz-nrgs/XYZ/%s.xyz" % (filename)
-                    geom_file = "%s/%s"%(self.xyz_path,filename.replace(".out",".out.xyz"))
-                elif self.mode == "alex":
-                    geom_file = "../data/XYZ-FILES/%s-xyzfiles/%s.xyz" % (
-                        system_name, filename.replace(".trunc.out", ""))
-                else:
-                    system_name = target_list.split("/")[-1].split("_")[0]
-                    geom_file = "%s/%s.xyz" % (
-                        self.xyz_path, 
-                        filename.replace(".trunc.out", "").replace("\"",""))
+                geom_file = "%s/%s"%(self.xyz_path,filename.replace(".out",".out.xyz"))
                 if os.path.exists(geom_file):
                     geom = open(geom_file, "r")
                     line_num = 0
@@ -453,62 +143,26 @@ class DataSet:
                             ])
                             atoms_iterated += 1
                         line_num += 1
-                    if self.mode == "alex":
-                        if train_data:
-                            self.training_aname.append(dimeraname)
-                            self.training_xyz.append(dimerxyz)
-                            self.training_geom_files.append(filename)
-                        else:
-                            self.testing_aname.append(dimeraname)
-                            self.testing_xyz.append(dimerxyz)
-                            self.testing_geom_files.append(filename)
-                    else:
-                        self.aname.append(dimeraname)
-                        self.xyz.append(dimerxyz)
-                        self.geom_files.append(filename)
+                    self.aname.append(dimeraname)
+                    self.xyz.append(dimerxyz)
+                    self.geom_files.append(filename)
                     geom.close()
 
                 else:
                     print("Invalid geometry file path encountered")
                     print(geom_file)
 
-                if self.mode != "alex":
-                    self.energy.append(molec[1])
-                    self.elec.append(molec[2])
-                    self.exch.append(molec[3])
-                    self.ind.append(molec[4])
-                    self.disp.append(molec[5])
-                    self.atom_tensor = self.aname
+                self.energy.append(molec[1])
+                self.elec.append(molec[2])
+                self.exch.append(molec[3])
+                self.ind.append(molec[4])
+                self.disp.append(molec[5])
+                self.atom_tensor = self.aname
 
-                if self.mode == "alex":
-                    if train_data == False:
-                        self.testing_energy.append(molec[3])
-                        self.testing_elec.append(molec[4])
-                        self.testing_exch.append(molec[5])
-                        self.testing_ind.append(molec[6])
-                        self.testing_disp.append(molec[7])
-                        self.testing_atom_tensor = self.testing_aname
-                    elif train_data == True:
-                        self.training_energy.append(molec[3])
-                        self.training_elec.append(molec[4])
-                        self.training_exch.append(molec[5])
-                        self.training_ind.append(molec[6])
-                        self.training_disp.append(molec[7])
-                        self.training_atom_tensor = self.training_aname
 
-        if self.mode != "alex":
-            return (self.aname, self.atom_tensor, self.xyz, self.elec,
-                    self.ind, self.disp, self.exch, self.energy,
-                    self.geom_files)
-        elif self.mode == "alex":
-            return (self.testing_aname, self.testing_atom_tensor,
-                    self.testing_xyz, self.testing_elec, self.testing_ind,
-                    self.testing_disp, self.testing_exch, self.testing_energy,
-                    self.testing_geom_files, self.training_aname,
-                    self.training_atom_tensor, self.training_xyz,
-                    self.training_elec, self.training_ind, self.training_disp,
-                    self.training_exch, self.training_energy,
-                    self.training_geom_files)
+        return (self.aname, self.atom_tensor, self.xyz, self.elec,
+                self.ind, self.disp, self.exch, self.energy,
+                self.geom_files)
     
     def read_from_xyz_dir(self):
         (self.xyz, self.aname, self.geom_files) = get_xyzs_from_dir(self.target_dir)
@@ -520,6 +174,33 @@ class DataSet:
                 self.elec, self.exch, self.ind, self.disp,
                 self.geom_files)
 
+
+def combine_energies_xyz(energy_file, xyz_path):
+    """Given an energy_file  containing a list of files and corresponding
+    energies and xyz_path, a path of .xyz files with names corresponding 
+    to names in the energy_file, write a new set of .xyz files containing
+    the energies (or other prudent info)  in the comment line.
+
+    """
+    with open(energy_file, "r") as en_file:
+        filenames = []
+        tot_int = []
+        elec = []
+        exch = []
+        ind = []
+        disp = []
+        next(en_file)
+        for line in en_file:
+            filenames.append(line[0])
+            tot_int.append(line[1])
+            elec.append(line[2])
+            exch.append(line[3])
+            ind.append(line[4])
+            disp.append(line[5])
+        en_file.close()
+    #CURRENTLY JUST READS FILE INFO. ADD STUFF TO PUT THESE INTO
+    #CORRESPONDING XYZ FILES AND DROP IN A NEW LOCATION  
+    
 
 def get_energies_from_list(file_path, target_files):
     """Scrape energies given a list of target files and a path to 
@@ -548,6 +229,19 @@ def get_energies_from_list(file_path, target_files):
                 print("Couldn't find file")
                 quit()
     return tot,elst,exch,ind,disp            
+
+def scan_directory(target_directory, target_file):
+    """Scan a directory for target file"""
+    for path, dirs, files in os.walk("./%s" % target_directory):
+        for f in files:
+            if f == target_file and f is not None:
+                file_loc = os.path.join(path, f)
+                print(f)
+    if "file_loc" in locals():
+        return file_loc
+    if not "file_loc" in locals():
+        print("File location not found in directory")
+
 
 def get_xyzs_from_dir(directory):
     """Given a directory with xyz files, scrape and return all data in lists"""
@@ -822,6 +516,17 @@ def sym_inp_single(sym_path, path, filename, j_molec, aname, NN, atomic_num_slic
         input_atom))  #only supports when all atoms have same # of features
     return
 
+def generate_supp_xyzs(xyz_path, data_dir, num_supp_per_file, max_perturb):
+    """Generates "supplementary" xyz files for each xyz file in a list.
+
+    These supplementary xyzs are the original files with coordinates 
+    perturbed by a random amount, maximum max_perturb. Supplementary 
+    xyzs will be generated for each xyz file in the target xyz path;
+    the number per file can be chosen with num_supp_per_file.
+
+    """
+     
+    return
 
 def construct_flat_symmetry_input(NN, rij, aname, ffenergy):
     """Construct flattened version of symmetry functions.

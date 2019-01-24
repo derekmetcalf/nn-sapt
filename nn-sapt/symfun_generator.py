@@ -26,11 +26,10 @@ inputs for best results.
 """
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
-#inputdir="NMe-acetamide_Indole"
-inputdirs = ["Indole_10k_Training","MeOH_10k_Training","NMe-acetamide_13k_Training"]
-xyz_paths = ["./../data/XYZ-FILES/NMe-acetamide_Indole-xyzfiles",
-                "./../data/XYZ-FILES/NMe-acetamide_Don--MeOH-xyzfiles",
-                "./../data/XYZ-FILES/NMe-acetamide_NMe-acetamide-xyzfiles"]
+inputdirs = ["Indole_10k_Training"]
+xyz_paths = ["./../data/XYZ-FILES/NMe-acetamide_Indole-xyzfiles"]
+with_supp = True
+
 
 #inputdirs = ["NMe-acetamide_Indole", "NMe-acetamide_Don--1H23triazole", "NMe-acetamide_Don--Benzene", "NMe-acetamide_DonH2--134oxadiazole"]
 
@@ -39,7 +38,6 @@ for i in range(len(inputdirs)):
     xyz_path = xyz_paths[i]
     print("Scraping property, geometry data...\n")
     t1 = time.time()
-
     
     #(aname, xyz, energy, atom_tensor, en_units) = routines.read_QM9_data(inputdir)
 
@@ -95,6 +93,21 @@ for i in range(len(inputdirs)):
               elapsed)
         return
 
+    def compute_spatial_info_with_supp(xyz, path, filenames):
+        print("Computing interatomic distances and angles...\n")
+        t1 = time.time()
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        num_systems = len(xyz)
+        routines.compute_displacements(xyz, path, filenames)
+        routines.compute_supp_displacements(xyz, path, filenames, 0.2)
+        routines.compute_thetas(num_systems, path, filenames)
+        routines.compute_supp_thetas(num_systems, path, filenames)
+        t2 = time.time()
+        elapsed = math.trunc((t2 - t1) / 60.0)
+        print("%s minutes spent computing interatomic distances and angles\n" %
+              elapsed)
+        return
     atom_dict = routines.atomic_dictionary()
 
     if data_obj.mode == "alex":
@@ -107,7 +120,7 @@ for i in range(len(inputdirs)):
         train_xyz = []
         test_xyz = []
     else:
-        compute_spatial_info(xyz, path, geom_files)
+        compute_spatial_info_with_supp(xyz, path, geom_files)
         atomic_num_tensor = routines.get_atomic_num_tensor(
             aname, atom_dict)
         print(atomic_num_tensor)
@@ -139,7 +152,8 @@ for i in range(len(inputdirs)):
             aname,
             np.zeros(len(energy)),
             atomic_num_tensor,
-            val_split=0)
+            val_split=0
+            with_supp)
 
     t2 = time.time()
     elapsed = (t2 - t1) / 60

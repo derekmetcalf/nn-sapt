@@ -106,7 +106,15 @@ if __name__ == "__main__":
                 "../data/NMA_Indole_Step_4",
                 "../data/NMA_MeOH_Step_4",
                 "../data/NMA_NMA_Step_4"]
-
+    aname = []
+    atom_tensor = []
+    xyz = []
+    elec = []
+    ind = []
+    disp = []
+    exch = []
+    energy = []
+    geom_files = []
     for i in range(len(inputdirs)):
         sym_input = []
         inputdir = inputdirs[i]
@@ -119,9 +127,17 @@ if __name__ == "__main__":
         #    "../data/Final_Sampling_Alex/%s_Step_4_AlexSampling.csv" % inputdir, "alex", "kcal/mol")
         data_obj = routines.DataSet(xyz_path,"../data/%s.csv"%inputdir,"non-alex","kcal/mol")    
         
-        (aname, atom_tensor, xyz, elec, ind,
-            disp, exch, energy, geom_files) = data_obj.read_from_target_list()
-        
+        (_aname, _atom_tensor, _xyz, _elec, _ind,
+            _disp, _exch, _energy, _geom_files) = data_obj.read_from_target_list()
+        aname = aname+ _aname
+        atom_tensor = atom_tensor + _atom_tensor
+        xyz = xyz + _xyz
+        elec = elec + _elec
+        ind = ind + _ind
+        disp = disp + _disp
+        exch = exch + _exch
+        energy = energy + _energy
+        geom_files = geom_files + _geom_files
         #(testing_aname, testing_atom_tensor, testing_xyz, testing_elec,
         #     testing_ind, testing_disp, testing_exch, testing_energy,
         #     testing_geom_files, aname, atom_tensor, xyz, elec, ind, disp, exch,
@@ -150,20 +166,21 @@ if __name__ == "__main__":
         elapsed = math.floor(t2 - t1)
         print("Symmetry functions loaded in %s seconds\n" % elapsed)
         
-        dropout_fraction = 0.05
-        l2_reg = 0.01
-        nodes = [200, 200]
-        val_split = 0.01
-        epochs = 100
-        n_layer = len(nodes)
-        #mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
+    dropout_fraction = 0.05
+    l2_reg = 0.01
+    nodes = [200, 200]
+    val_split = 0.01
+    epochs = 100
+    n_layer = len(nodes)
+    #mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
+    #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
+    #standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
+    #                ind,disp,n_layer,nodes,mt_vec,val_split,
+    #                dropout_fraction,l2_reg,epochs,results_name)
+    for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+        mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
         #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-        #standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
-        #                ind,disp,n_layer,nodes,mt_vec,val_split,
-        #                dropout_fraction,l2_reg,epochs,results_name)
-        for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
-            mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
-            results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-            standard_run(sym_input,aname,results_name,geom_files,energy,
-                         elec,exch,ind,disp,n_layer,nodes,mt_vec,val_split,   
-                         dropout_fraction,l2_reg,epochs,results_name)
+        results_name = "NMA_Indole_Aniline_MeOH_combo%.1g"%mt_vec[0]
+        standard_run(sym_input,aname,results_name,geom_files,energy,
+                     elec,exch,ind,disp,n_layer,nodes,mt_vec,val_split,   
+                     dropout_fraction,l2_reg,epochs,results_name)

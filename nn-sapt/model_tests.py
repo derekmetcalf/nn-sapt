@@ -108,7 +108,7 @@ def evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
     
-    system = "NMA-MeOH"
+    system = "NMA-NMA"
     inputdir="%s-crystallographic"%system
     #xyz_path = "../data/XYZ-FILES/NMe-acetamide_Don--Aniline-xyzfiles"
     
@@ -123,8 +123,8 @@ if __name__ == "__main__":
     elapsed = math.floor(t2-t1)
     print("Properties and geometries collected in %s seconds\n"%elapsed)
     
-    model = load_model("../data/NMe-acetamide_Don--MeOH_model.h5")
-    results_name = "step_4_testing_%s"%inputdir
+    model = load_model("../results/NMe-acetamide_13k_Training_tot_en_frac_0.6_model.h5")
+    results_name = "step_3_testing_%s"%inputdir
     evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
                    testing_elec, testing_exch, testing_ind, testing_disp)
      
