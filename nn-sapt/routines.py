@@ -105,7 +105,7 @@ class DataSet:
     def read_sapt_from_target_dir(self):
         """Collect energies and geometries from disparate sources.
 
-        This is an extreme unitask method for property scraping in strange 
+        This is a unitask method for property scraping in strange 
         situations like files stored with different naming conventions 
         or combining many data directories.
 
@@ -175,32 +175,104 @@ class DataSet:
                 self.geom_files)
 
 
-def combine_energies_xyz(energy_file, xyz_path):
+def combine_energies_xyz(energy_file, xyz_path, new_path):
     """Given an energy_file  containing a list of files and corresponding
     energies and xyz_path, a path of .xyz files with names corresponding 
     to names in the energy_file, write a new set of .xyz files containing
-    the energies (or other prudent info)  in the comment line.
+    the energies (or other prudent info)  in the comment line to new_path.
 
     """
     with open(energy_file, "r") as en_file:
         filenames = []
         tot_int = []
-        elec = []
+        elst = []
         exch = []
         ind = []
         disp = []
         next(en_file)
         for line in en_file:
-            filenames.append(line[0])
+            line = line.split(",")
+            filenames.append(line[0].replace(".trunc.out",".xyz"))
             tot_int.append(line[1])
-            elec.append(line[2])
+            elst.append(line[2])
             exch.append(line[3])
             ind.append(line[4])
             disp.append(line[5])
         en_file.close()
-    #CURRENTLY JUST READS FILE INFO. ADD STUFF TO PUT THESE INTO
-    #CORRESPONDING XYZ FILES AND DROP IN A NEW LOCATION  
-    
+    if not os.path.isdir(new_path):
+        os.mkdir(new_path)
+
+    for i in range(len(filenames)):
+        data = []
+        with open(f"{xyz_path}/{filenames[i]}","r") as old_xyz:
+            for line in old_xyz:
+                data.append(line)
+        with open(f"{new_path}/{filenames[i]}","w+") as new_xyz:
+            new_xyz.write(data[0])
+            new_xyz.write(f"{filenames[i]},{tot_int[i]},{elst[i]},{exch[i]},{ind[i]},{disp[i]}")
+            for j in range(len(data)-2):
+                new_xyz.write(data[j+2])
+    return
+
+def get_xyz_from_combo_files(path):
+    xyz = []
+    atoms = []
+    for file in glob.glob(f"{path}/*.xyz"):
+        with open(file, "r") as xyzfile:
+            next(xyzfile)
+            next(xyzfile)
+            molec_atoms = []
+            molec_xyz = []
+            for line in xyzfile:
+                data = line.split()
+                molec_atoms.append(data[0])
+                molec_xyz.append([float(data[1]), float(data[2]), float(data[3])])
+            atoms.append(molec_atoms)
+            xyz.append(molec_xyz)
+    return atoms, xyz
+
+def get_sapt_from_combo_files(path):
+    """Collects SAPT energies and corresponding filenames from the combo xyz
+    file / energy files written by routines.combine_energies_xyz
+
+    """
+    filenames = []
+    tot_en = []
+    elst = []
+    exch = []
+    ind = []
+    disp = []
+    for file in glob.glob(f"{path}/*.xyz"):
+        with open(file, "r") as saptfile:
+            temp = saptfile.readlines()
+            data = temp[1].split(",")
+            filenames.append(data[0])
+            tot_en.append(float(data[1]))
+            elst.append(float(data[2]))
+            exch.append(float(data[3]))
+            ind.append(float(data[4]))
+            disp.append(float(data[5])) 
+    return filenames, tot_en, elst, exch, ind, disp    
+
+def make_perturbed_xyzs(path, max_shift=0.1):
+    """Currently makes a perturbed xyz file for each file in the target
+    directory and deposits those files in the same path.
+
+    """
+    (atoms,xyz) = get_xyz_from_combo_files(path)
+    (filenames,tot_int,elst,exch,ind,disp) = get_sapt_from_combo_files(path)
+    for i in range(len(xyz)):
+        perturbation = (np.random.rand(len(xyz[i]),3) - 0.5) * 2 * max_shift
+        new_xyz = xyz[i] + perturbation
+        new_filename = "supp_" + filenames[i]
+        with open(f"{path}/{new_filename}","w+") as xyz_file:
+            xyz_file.write(f"{len(new_xyz)}\n")
+            xyz_file.write(f"{new_filename},{tot_int[i]},{elst[i]},{exch[i]},{ind[i]},{disp[i]}\n")
+            for j in range(len(new_xyz)):
+                xyz_file.write(f"{atoms[i][j]} {new_xyz[j,0]} {new_xyz[j,1]} {new_xyz[j,2]}\n")
+                
+        
+    return
 
 def get_energies_from_list(file_path, target_files):
     """Scrape energies given a list of target files and a path to 
@@ -516,17 +588,6 @@ def sym_inp_single(sym_path, path, filename, j_molec, aname, NN, atomic_num_slic
         input_atom))  #only supports when all atoms have same # of features
     return
 
-def generate_supp_xyzs(xyz_path, data_dir, num_supp_per_file, max_perturb):
-    """Generates "supplementary" xyz files for each xyz file in a list.
-
-    These supplementary xyzs are the original files with coordinates 
-    perturbed by a random amount, maximum max_perturb. Supplementary 
-    xyzs will be generated for each xyz file in the target xyz path;
-    the number per file can be chosen with num_supp_per_file.
-
-    """
-     
-    return
 
 def construct_flat_symmetry_input(NN, rij, aname, ffenergy):
     """Construct flattened version of symmetry functions.
