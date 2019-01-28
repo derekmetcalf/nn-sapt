@@ -215,21 +215,26 @@ def combine_energies_xyz(energy_file, xyz_path, new_path):
     return
 
 def get_xyz_from_combo_files(path):
+    atom_dict = atomic_dictionary()
     xyz = []
     atoms = []
+    atom_nums = []
     for file in glob.glob(f"{path}/*.xyz"):
         with open(file, "r") as xyzfile:
             next(xyzfile)
             next(xyzfile)
             molec_atoms = []
             molec_xyz = []
+            molec_atom_nums = []
             for line in xyzfile:
                 data = line.split()
                 molec_atoms.append(data[0])
+                molec_atom_nums.append(atom_dict[data[0]])
                 molec_xyz.append([float(data[1]), float(data[2]), float(data[3])])
             atoms.append(molec_atoms)
             xyz.append(molec_xyz)
-    return atoms, xyz
+            atom_nums.append(molec_atom_nums)
+    return atoms, atom_nums, xyz
 
 def get_sapt_from_combo_files(path):
     """Collects SAPT energies and corresponding filenames from the combo xyz
@@ -544,7 +549,8 @@ def construct_symmetry_input(NN, path, filenames, aname, ffenergy,
 
     """
     sym_path = path.replace("spatial_info", "sym_inp")
-    os.mkdir(sym_path)
+    if os.path.exists(sym_path) == False: 
+        os.mkdir(sym_path)
     Parallel(
         n_jobs=4, verbose=1)(delayed(sym_inp_single)(
             sym_path, path, filenames[j_molec], j_molec, aname, NN, atomic_num_tensor[j_molec])
