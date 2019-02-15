@@ -28,30 +28,17 @@ nature of the required evaluation. Do not run this blindly.
 """
 
 
-def evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
+def evaluate_model(model, sym_input, testing_files, results_name, testing_energy,
                    testing_elec, testing_exch, testing_ind, testing_disp):
     """Evaluate NN-SAPT model for accuracy and write the results."""
-    print("Loading symmetry functions from file...\n")
-    t1 = time.time()
-    sym_dir = "../data/%s_sym_inp" % inputdir
-    sym_input = []
-    for i in range(
-            len([
-                name for name in os.listdir("%s" % sym_dir)
-                if os.path.isfile(os.path.join(sym_dir, name))
-            ])):
-        sym_input.append(np.load(os.path.join(sym_dir, "symfun_%s.npy" % i)))
-
-    sym_input = routines.scale_symmetry_input(sym_input)
+    
     sym_input = np.array(sym_input)
     sym_input = np.transpose(sym_input, (1, 0, 2))
     sym_input = list(sym_input)
-    t2 = time.time()
-    elapsed = math.floor(t2 - t1)
-    print("Symmetry functions loaded in %s seconds\n" % elapsed)
 
     (energy_pred, elec_pred, exch_pred, ind_pred,
      disp_pred) = routines.infer_on_test(model, sym_input)
+
     print("Inferred on inputs")
 
     energy_pred = np.array(np.array(energy_pred).T[0])
@@ -107,25 +94,22 @@ def evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
 
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
-    
-    system = "NMA-NMA"
-    inputdir="%s-crystallographic"%system
-    #xyz_path = "../data/XYZ-FILES/NMe-acetamide_Don--Aniline-xyzfiles"
-    
-    print("Collecting properties and geometries...\n")
-    t1 = time.time()
+
     NNff = NNforce_field('GA_opt',0,0)
-    data_obj = routines.DataSet("../data/crystallographic_data/%s-xyz-nrgs/XYZ"%system,"../data/crystallographic_data/%s-xyz-nrgs/FSAPT0/SAPT0-NRGS-COMPONENTS.txt"%system,None,"kcal/mol")
-
-    (aname,atom_tensor,xyz,testing_elec,testing_ind,testing_disp,testing_exch,testing_energy,testing_files) = data_obj.read_from_target_list()
     
-    t2 = time.time()
-    elapsed = math.floor(t2-t1)
-    print("Properties and geometries collected in %s seconds\n"%elapsed)
-    
-    model = load_model("../results/NMe-acetamide_13k_Training_tot_en_frac_0.6_model.h5")
-    results_name = "step_3_testing_%s"%inputdir
-    evaluate_model(model, inputdir, testing_files, results_name, testing_energy,
-                   testing_elec, testing_exch, testing_ind, testing_disp)
+    #path = "../data/NMe-acetamide_Don--Aniline_crystallographic"
+    path = "./shuffled_xyzs"
      
-
+    (filenames,tot_en,elst,exch,ind,disp) = routines.get_sapt_from_combo_files(path)
+   
+    sym_input = [] 
+    for i in range(len(filenames)):
+        file = f"{path}/{filenames[i]}_symfun.npy"
+        sym_input.append(np.load(file)) 
+    
+    model = load_model("./NMA-Aniline_Step_3_pert_and_art_model.h5")
+     
+    results_name = "NMA_Aniline_shuffled_samples_test"
+    
+    evaluate_model(model, sym_input, filenames, results_name, tot_en,
+                        elst, exch, ind, disp) 

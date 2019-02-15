@@ -189,10 +189,10 @@ def combine_energies_xyz(energy_file, xyz_path, new_path):
         exch = []
         ind = []
         disp = []
-        next(en_file)
+        #next(en_file)
         for line in en_file:
             line = line.split(",")
-            filenames.append(line[0].replace(".trunc.out",".xyz"))
+            filenames.append(line[0].replace(".out",".out.xyz"))
             tot_int.append(line[1])
             elst.append(line[2])
             exch.append(line[3])
@@ -215,6 +215,7 @@ def combine_energies_xyz(energy_file, xyz_path, new_path):
     return
 
 def get_xyz_from_combo_files(path):
+    
     atom_dict = atomic_dictionary()
     xyz = []
     atoms = []
@@ -237,7 +238,7 @@ def get_xyz_from_combo_files(path):
     return atoms, atom_nums, xyz
 
 def get_sapt_from_combo_files(path):
-    """Collects SAPT energies and corresponding filenames from the combo xyz
+    """Collect SAPT energies and corresponding filenames from the combo xyz
     file / energy files written by routines.combine_energies_xyz
 
     """
@@ -260,7 +261,7 @@ def get_sapt_from_combo_files(path):
     return filenames, tot_en, elst, exch, ind, disp    
 
 def make_perturbed_xyzs(path, max_shift=0.1):
-    """Currently makes a perturbed xyz file for each file in the target
+    """Currently, make a perturbed xyz file for each file in the target
     directory and deposits those files in the same path.
 
     """
@@ -357,7 +358,7 @@ def progress(count, total, suffix=''):
 def infer_on_test(model, sym_inp):
     """Perform inferences symmetry function input given a Keras model."""
     (en_pred, elec_pred, exch_pred, ind_pred,
-     disp_pred) = model.predict_on_batch(sym_inp)
+        disp_pred) = model.predict_on_batch(sym_inp)
     return en_pred, elec_pred, exch_pred, ind_pred, disp_pred
 
 

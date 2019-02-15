@@ -7,6 +7,7 @@ import time
 from keras.models import Model, Sequential
 from keras.layers import Input, Lambda, Dense, Activation, Dropout, concatenate, add
 from keras.utils import plot_model
+from keras.callbacks import TensorBoard
 from keras import regularizers
 from sys import stdout
 from sklearn.model_selection import KFold
@@ -58,6 +59,8 @@ def sapt_net(sym_input,
     #sym_input = np.transpose(sym_input, (1,0,2))
     y = np.transpose(np.array([energy, elec, exch, ind, disp]))
     val_scores = []
+   
+ 
     """
     kfold = KFold(folds)
 
@@ -73,7 +76,8 @@ def sapt_net(sym_input,
     for train, test in kfold.split(sym_input): 
         X_train, X_test = sym_input[train], sym_input[test]
         y_train, y_test = y[train], y[test]
-    """
+    
+"""
 
     NNff = NNforce_field('GA_opt', 0, 0)
     NNunique = []
@@ -101,7 +105,8 @@ def sapt_net(sym_input,
                 i_size_l,
                 activation='relu',
                 use_bias=True,
-                kernel_regularizer=regularizers.l2(l2_reg))
+                kernel_regularizer=regularizers.l2(l2_reg),
+                name=f"{i_type}_{n}")
             NNelement.append(NN)
             NN = Dropout(dropout_fraction)
             NNelement.append(NN)
@@ -111,12 +116,13 @@ def sapt_net(sym_input,
         NN = Dense(i_size_l, kernel_regularizer=regularizers.l2(l2_reg))
         NNelement.append(NN)
         NNunique.append(NNelement)
-
+    
     NNtotal = []
     inputs = []
     for i_atom in range(len(aname[0])):
         itype = atype[0][i_atom]
         typeNN = NNff.element_force_field[aname[0][i_atom]]
+        print(typeNN.radial_symmetry_functions)
         i_size = len(typeNN.radial_symmetry_functions) + len(
             typeNN.angular_symmetry_functions)
         atom_input = Input(shape=(i_size, ))
@@ -132,6 +138,13 @@ def sapt_net(sym_input,
                     layer = NNunique[itype][i_layer](layer)  #, training=True)
         inputs.append(atom_input)
         NNtotal.append(layer)
+   
+
+    #molec_input = Input(shape=(max_atoms,i_size))
+        
+
+
+
 
     component_predictions = add(NNtotal)
     elst_tensor = Lambda(
@@ -172,8 +185,10 @@ def sapt_net(sym_input,
 
     print("Fitting neural network to property data...\n")
     t1 = time.time()
-
-    history = model.fit(X_train, y_train, batch_size=batch_size, epochs=epochs)
+    
+    tensorboard = TensorBoard(log_dir=f"logs/{time.time()}")
+    history = model.fit(X_train, y_train, batch_size=batch_size,
+                        callbacks=[tensorboard], epochs=epochs)
     t2 = time.time()
     elapsed = math.floor((t2 - t1) / 60.0)
     print("Neural network fit in %s minutes\n" % elapsed)

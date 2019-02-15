@@ -4,6 +4,7 @@ import csv
 import sys
 import math
 import time
+import glob
 from keras.models import Model, Sequential
 from keras.layers import Input, Lambda, Dense, Activation, Dropout, concatenate, add
 from keras.utils import plot_model
@@ -11,6 +12,7 @@ from keras import regularizers
 from sys import stdout
 from sklearn import preprocessing
 import routines
+import model_tests
 import keras.backend as K
 import matplotlib.pyplot as plt
 import numpy as np
@@ -97,15 +99,12 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
     model_tests.evaluate_model(model, "NMA-Aniline-crystallographic", geom_files, results_name, testing_energy, testing_elec, testing_exch, testing_ind, testing_disp)
     K.clear_session()
     """
+    return model
 
 if __name__ == "__main__":
     
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    inputdirs = ["Aniline_10k_Training", "Indole_10k_Training", "MeOH_10k_Training", "NMe-acetamide_13k_Training"]
-    xyz_paths = ["../data/NMA_Aniline_Step_4",
-                "../data/NMA_Indole_Step_4",
-                "../data/NMA_MeOH_Step_4",
-                "../data/NMA_NMA_Step_4"]
+    inputdirs = ["NMA-Aniline_Step_3_pert_and_art"]
     aname = []
     atom_tensor = []
     xyz = []
@@ -117,33 +116,12 @@ if __name__ == "__main__":
     geom_files = []
     for i in range(len(inputdirs)):
         sym_input = []
-        inputdir = inputdirs[i]
-        xyz_path = xyz_paths[i]
+        path = inputdirs[i]
         print("Collecting properties and geometries...\n")
         t1 = time.time()
-        NNff = NNforce_field('GA_opt', 0, 0)
-        #(aname, xyz, elec, exch, ind, disp, energy, atom_tensor, en_units) = routines.read_sapt_data(inputdir)
-        #data_obj = routines.DataSet(
-        #    "../data/Final_Sampling_Alex/%s_Step_4_AlexSampling.csv" % inputdir, "alex", "kcal/mol")
-        data_obj = routines.DataSet(xyz_path,"../data/%s.csv"%inputdir,"non-alex","kcal/mol")    
-        
-        (_aname, _atom_tensor, _xyz, _elec, _ind,
-            _disp, _exch, _energy, _geom_files) = data_obj.read_from_target_list()
-        aname = aname+ _aname
-        atom_tensor = atom_tensor + _atom_tensor
-        xyz = xyz + _xyz
-        elec = elec + _elec
-        ind = ind + _ind
-        disp = disp + _disp
-        exch = exch + _exch
-        energy = energy + _energy
-        geom_files = geom_files + _geom_files
-        #(testing_aname, testing_atom_tensor, testing_xyz, testing_elec,
-        #     testing_ind, testing_disp, testing_exch, testing_energy,
-        #     testing_geom_files, aname, atom_tensor, xyz, elec, ind, disp, exch,
-        #     energy, geom_files) = data_obj.read_from_target_list()
-        #for i in range(len(aname[0])):
-        #    print(aname[0][i])
+        NN = NNforce_field('GA_opt', 0, 0)
+        (atoms,atom_nums,xyz) = routines.get_xyz_from_combo_files(path)
+        (filenames,tot_en,elst,exch,ind,disp) = routines.get_sapt_from_combo_files(path)
         
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
@@ -151,36 +129,35 @@ if __name__ == "__main__":
         
         print("Loading symmetry functions from file...\n")
         t1 = time.time()
-        sym_dir = "../data/%s_sym_inp" % inputdir
-        #for i in range(
-        #        len([
-        #            name for name in os.listdir("%s" % sym_dir)
-        #            if os.path.isfile(os.path.join(sym_dir, name))
-        #        ])):
-        for name in geom_files:
-            sym_input.append(np.load("%s_symfun.npy"%os.path.join(sym_dir, name)))
-        
-        sym_input = routines.scale_symmetry_input(sym_input)
+
+        symfun_files = [] 
+        for i in range(len(filenames)):
+            file = f"{path}/{filenames[i]}_symfun.npy"
+            symfun_files.append(file)
+            sym_input.append(np.load(file))
+
+        #sym_input = routines.scale_symmetry_input(sym_input)
         
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
         print("Symmetry functions loaded in %s seconds\n" % elapsed)
-        
+
     dropout_fraction = 0.05
     l2_reg = 0.01
-    nodes = [200, 200]
-    val_split = 0.01
+    nodes = [150]
+    val_split = 0.1
     epochs = 100
     n_layer = len(nodes)
-    #mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
-    #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-    #standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
-    #                ind,disp,n_layer,nodes,mt_vec,val_split,
-    #                dropout_fraction,l2_reg,epochs,results_name)
-    for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
-        mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
+    mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
+    results_name = "%s_tot_en_frac_%.1g"%(path,float(mt_vec[0]))
+    model = standard_run(sym_input,atoms,path,filenames,tot_en,elst,exch,
+                    ind,disp,n_layer,nodes,mt_vec,val_split,
+                    dropout_fraction,l2_reg,epochs,results_name)
+
+    #for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+    #    mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
         #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-        results_name = "NMA_Indole_Aniline_MeOH_combo%.1g"%mt_vec[0]
-        standard_run(sym_input,aname,results_name,geom_files,energy,
-                     elec,exch,ind,disp,n_layer,nodes,mt_vec,val_split,   
-                     dropout_fraction,l2_reg,epochs,results_name)
+    #    results_name = "NMA_Indole_Aniline_MeOH_combo%.1g"%mt_vec[0]
+    #    standard_run(sym_input,aname,results_name,geom_files,energy,
+    #                 elec,exch,ind,disp,n_layer,nodes,mt_vec,val_split,   
+    #                 dropout_fraction,l2_reg,epochs,results_name)
