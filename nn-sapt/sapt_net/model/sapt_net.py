@@ -75,13 +75,15 @@ def build_atom_nets(unique_atoms, atom_inp_size):
 """
 
 def O_net():
-    layer = tf.layers.dense(symfuns, width, activation='relu',
+    layer = tf.layers.dense(symfuns, width, activation=None,
                                 use_bias=True, reuse=tf.AUTO_REUSE, name="O_0",
                                 kernel_initializer=weight_init)
+    layer = tf.nn.leaky_relu(layer)
     for j in range(depth):
-        layer = tf.layers.dense(layer, width, activation='relu',
+        layer = tf.layers.dense(layer, width, activation=None,
                         use_bias=True, reuse=tf.AUTO_REUSE,name="O_"+str(j+1),
                         kernel_initializer=weight_init)
+        layer = tf.nn.leaky_relu(layer)
         #layer = tf.layers.dropout(layer, rate=0.1)
     layer = tf.layers.dense(layer, 20, use_bias=True, reuse=tf.AUTO_REUSE,
                             name="O_last", kernel_initializer=weight_init)
@@ -91,13 +93,15 @@ def O_net():
 
 def C_net():
     
-    layer = tf.layers.dense(symfuns, width, activation='relu',
+    layer = tf.layers.dense(symfuns, width, activation=None,
                                 use_bias=True, reuse=tf.AUTO_REUSE, name="C_0",
                                 kernel_initializer=weight_init)
+    layer = tf.nn.leaky_relu(layer)
     for j in range(depth):
-        layer = tf.layers.dense(layer, width, activation='relu',
+        layer = tf.layers.dense(layer, width, activation=None,
                         use_bias=True, reuse=tf.AUTO_REUSE,name="C_"+str(j+1),
                         kernel_initializer=weight_init)
+        layer = tf.nn.leaky_relu(layer)
         #layer = tf.layers.dropout(layer, rate=0.1)
     layer = tf.layers.dense(layer, 20, use_bias=True, reuse=tf.AUTO_REUSE,
                             name="C_last", kernel_initializer=weight_init)
@@ -106,13 +110,15 @@ def C_net():
     return C_out
 
 def N_net():
-    layer = tf.layers.dense(symfuns, width, activation='relu',
+    layer = tf.layers.dense(symfuns, width, activation=None,
                                 use_bias=True, reuse=tf.AUTO_REUSE, name="N_0",
                                 kernel_initializer=weight_init)
+    layer = tf.nn.leaky_relu(layer)
     for j in range(depth):
-        layer = tf.layers.dense(layer, width, activation='relu',
+        layer = tf.layers.dense(layer, width, activation=None,
                         use_bias=True, reuse=tf.AUTO_REUSE,name="N_"+str(j+1),
                         kernel_initializer=weight_init)
+        layer = tf.nn.leaky_relu(layer)
         #layer = tf.layers.dropout(layer, rate=0.1)
     layer = tf.layers.dense(layer, 20, use_bias=True, reuse=tf.AUTO_REUSE,
                             name="N_last", kernel_initializer=weight_init)
@@ -121,13 +127,15 @@ def N_net():
     return N_out
 
 def H_net(): 
-    layer = tf.layers.dense(symfuns, width, activation='relu',
+    layer = tf.layers.dense(symfuns, width, activation=None,
                                 use_bias=True, reuse=tf.AUTO_REUSE, name="H_0",
                                 kernel_initializer=weight_init)
+    layer = tf.nn.leaky_relu(layer)
     for j in range(depth):
-        layer = tf.layers.dense(layer, width, activation='relu',
+        layer = tf.layers.dense(layer, width, activation=None,
                         use_bias=True, reuse=tf.AUTO_REUSE,name="H_"+str(j+1),
                         kernel_initializer=weight_init)
+        layer = tf.nn.leaky_relu(layer)
         #layer = tf.layers.dropout(layer, rate=0.1)
     layer = tf.layers.dense(layer, 20, use_bias=True, reuse=tf.AUTO_REUSE,
                             name="H_last", kernel_initializer=weight_init)
@@ -184,7 +192,7 @@ if __name__ == "__main__":
             en_label.append(labels[i][0])
         label = tf.placeholder(tf.float32, shape=[])
         cost = tf.losses.mean_squared_error(output,label)
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(cost)
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
 
         init = tf.global_variables_initializer()
         sess.run(init)
@@ -211,4 +219,6 @@ if __name__ == "__main__":
                 elapsed = (t2-t1)/60
                 print("Epoch", '%04d' % (epoch+1), "| cost=", \
                     "{:.9f}".format(avg_cost), f"| time = {elapsed} min")
-                                         
+        inputs = {"symfun_ph":symfuns, "atom_ph":atoms,"label_ph":label}
+        outputs = {"prediction":model_output}
+        tf.saved_model.simple_save(sess, "./saved_model", inputs, outputs)
