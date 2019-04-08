@@ -6,7 +6,7 @@ import math
 import time
 import glob
 from keras.models import Model, Sequential
-from keras.layers import Input, Lambda, Dense, Activation, Dropout, concatenate, add
+from keras.layers import Input, Lambda, Dense, Activation, Dropout, Concatenate, concatenate, add
 from keras.utils import plot_model
 from keras import regularizers
 from sys import stdout
@@ -40,7 +40,7 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
                 dropout_fraction,l2_reg,epochs, results_name):
     (model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
      test_disp, disp_pred, test_ind, ind_pred, avg_mae,
-     std_mae) = sapt_net.sapt_net(
+     std_mae, atom_model) = sapt_net.sapt_net(
          sym_input,
          aname,
          inputdir,
@@ -100,12 +100,12 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
     model_tests.evaluate_model(model, "NMA-Aniline-crystallographic", geom_files, results_name, testing_energy, testing_elec, testing_exch, testing_ind, testing_disp)
     K.clear_session()
     """
-    return model
+    return model, atom_model
 
 if __name__ == "__main__":
     
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    inputdirs = ["./SSI_spiked"]
+    inputdirs = ["./SSI_neutral"]
     aname = []
     atom_tensor = []
     xyz = []
@@ -153,11 +153,12 @@ if __name__ == "__main__":
     l2_reg = 0.01
     nodes = [50,50,50]
     val_split = 0.05
-    epochs = 250
+    epochs = 200
     n_layer = len(nodes)
     mt_vec = [1, 0, 0, 0, 0]
-    results_name = "spiked_SSI"
-    model = standard_run(sym_input,atoms,"./",filenames,tot_en,elst,exch,
+    results_name = "SSI_neutral"
+    (model, atom_model) = standard_run(sym_input,atoms,results_name,
+                    filenames,tot_en,elst,exch,
                     ind,disp,n_layer,nodes,mask,mt_vec,val_split,
                     dropout_fraction,l2_reg,epochs,results_name)
 

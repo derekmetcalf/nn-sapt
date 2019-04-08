@@ -5,7 +5,7 @@ import sys
 import math
 import time
 from keras.models import Model, Sequential
-from keras.layers import Input, Lambda, Dense, Activation, Dropout, dot, concatenate, add
+from keras.layers import Input, Lambda, Dense, Activation, Dropout, Concatenate, dot, concatenate, add
 from keras.utils import plot_model
 from keras.callbacks import TensorBoard
 from keras import regularizers
@@ -142,7 +142,7 @@ def sapt_net(sym_input,
         molec_eval.append(atom_outs)
         inputs.append(atom_input)
     
-    atom_component_preds = concatenate(molec_eval)
+    atom_component_preds = Lambda(lambda x: K.expand_dims(x), name="atom_comps")(molec_eval)
     component_predictions = add(molec_eval)
     elst_tensor = Lambda(
         lambda component_predictions: K.tf.gather(
@@ -175,6 +175,9 @@ def sapt_net(sym_input,
         loss="mean_squared_error",
         metrics=['mae'],
         loss_weights=multitarget_vec)
+
+    atom_model = Model(inputs=inputs, outputs=atom_component_preds)
+
     t2 = time.time()
     elapsed = math.floor(t2 - t1)
     print(
@@ -205,13 +208,14 @@ def sapt_net(sym_input,
     (energy_pred, elec_pred, exch_pred, ind_pred,
      disp_pred) = model.predict_on_batch(X_test)
     model.save("%s_model.h5" % results_name)
+    atom_model.save("%s_atomic_model.h5" % results_name)
     scores = model.evaluate(X_test, y_test, verbose=0)
     print("%s: %.2f" % (model.metrics_names[1], scores[1]))
     val_scores.append(scores[1])
 
     print("%.2f (+/-) %.2f" % (np.mean(val_scores), np.std(val_scores)))
     return model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred, test_disp, disp_pred, test_ind, ind_pred, np.mean(
-        val_scores), np.std(val_scores)
+        val_scores), np.std(val_scores), atom_model
 
 
 def sapt_errors(energy, energy_pred, elec, elec_pred, exch, exch_pred, disp,

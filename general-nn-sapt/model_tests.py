@@ -10,7 +10,9 @@ from keras.utils import plot_model
 from keras import regularizers
 from sys import stdout
 from sklearn import preprocessing
+from mpl_toolkits.mplot3d import Axes3D
 import routines
+import matplotlib
 import tensorflow as tf
 import keras.backend as K
 import matplotlib.pyplot as plt
@@ -128,6 +130,9 @@ def evaluate_model(model, sym_input, testing_files, results_name,
     return
 
 def uncertainty_inferences(model, sym_input, simulations=1000):
+    sym_input = np.array(sym_input)
+    sym_input = np.transpose(sym_input, (1, 0, 2))
+    sym_input = list(sym_input)
     energy_dist = []
     elec_dist = []
     exch_dist = []
@@ -156,12 +161,61 @@ def uncertainty_inferences(model, sym_input, simulations=1000):
          elec_sig, exch_sig, ind_sig,
          disp_sig)
 
+def molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy"):    
+    atom_output, atom_std = get_atom_outs(atom_model, sym_input)
+    molec_ens = []
+    molec_stds = []
+    for molec in range(len(atom_output)):
+        atom_ens = []
+        atom_stds = []
+        for atom in range(len(atom_output[molec])):
+            atom_contrib = np.sum(atom_output[molec][atom])
+            atom_ens.append(atom_contrib)
+            atom_std_contrib = np.sum(atom_std[molec][atom])
+            atom_stds.append(atom_std_contrib)
+        molec_ens.append(atom_ens)
+        molec_stds.append(atom_stds)
+    molec_ens = np.array(molec_ens)
+    molec_stds = np.array(molec_stds)
+    
+    graph_en = molec_ens[molec_id]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    xyz = np.transpose(np.array(xyz),(2,0,1))
+    graph_std = molec_stds[molec_id][:len(xyz[0][molec_id])]
+    graph_en = molec_ens[molec_id][:len(xyz[0][molec_id])]
+
+    if prop == "energy": prop=graph_en
+    elif prop == "uncertainty": prop=graph_std
+    else: print("invalid property for graphing"); quit()
+    
+    sc = ax.scatter(xyz[0][molec_id], xyz[1][molec_id], xyz[2][molec_id], s=150, c=graph_std, cmap="YlOrBr")#, label=lab)
+    for i in range(len(atoms[molec_id])):
+        ax.text(xyz[0][molec_id][i], xyz[1][molec_id][i], xyz[2][molec_id][i], atoms[molec_id][i], size=20, zorder=1)
+    plt.colorbar(sc)
+    plt.show()
+    return
+
+def get_atom_outs(atom_model, sym_input, simulations=1000):
+    layer_name = "atom_comps/concat"
+    sym_input = np.array(sym_input)
+    sym_input = np.transpose(sym_input, (1, 0, 2))
+    sym_input = list(sym_input)
+    atom_sim = []
+    for i in range(simulations):
+        atom_sim.append(atom_model.predict_on_batch(sym_input))
+    atom_output = np.average(atom_sim, axis=0)
+    atom_std = np.std(atom_sim, axis=0)
+    return atom_output, atom_std
+
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
     NNff = NNforce_field('GA_opt',0,0)
-    
-    train_path = "./SSI_spiked"
+ 
+    train_path = "./SSI_neutral"
     (train_atoms, train_atom_nums, train_xyz) = routines.get_xyz_from_combo_files(train_path)
     max_train_atoms = 0
     for i in range(len(train_atoms)):
@@ -182,9 +236,12 @@ if __name__ == "__main__":
     sym_input = routines.pad_sym_inp(sym_input, max_train_atoms=max_train_atoms)
     sym_input = np.concatenate((sym_input,mask),axis=2)
 
-    model = load_model("./_model.h5")
-
-    results_name = "dropout_uncertainty_tests"
- 
-    evaluate_model(model, sym_input, filenames, results_name, tot_en,
-                        elst, exch, ind, disp, uncertainty=True) 
+    model = load_model("./SSI_neutral_model.h5")
+    atom_model = load_model("./SSI_neutral_atomic_model.h5")
+    results_name = "dropout_uncertainty_SSI_only"
+       
+    molec_id = 12 #which sample from dataset to graph
+    molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty")   
+    
+    #evaluate_model(model, sym_input, filenames, results_name, tot_en,
+    #                    elst, exch, ind, disp, uncertainty=True)
