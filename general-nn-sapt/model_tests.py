@@ -16,6 +16,7 @@ import matplotlib
 import tensorflow as tf
 import keras.backend as K
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as PathEffects
 import numpy as np
 import symmetry_functions as sym
 import FFenergy_openMM as saptff
@@ -161,6 +162,7 @@ def uncertainty_inferences(model, sym_input, simulations=1000):
          elec_sig, exch_sig, ind_sig,
          disp_sig)
 
+
 def molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy"):    
     atom_output, atom_std = get_atom_outs(atom_model, sym_input)
     molec_ens = []
@@ -179,6 +181,8 @@ def molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy"):
     molec_stds = np.array(molec_stds)
     
     graph_en = molec_ens[molec_id]
+    
+    connectivity = routines.get_connectivity_mat(xyz[molec_id])
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -191,9 +195,17 @@ def molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy"):
     elif prop == "uncertainty": prop=graph_std
     else: print("invalid property for graphing"); quit()
     
-    sc = ax.scatter(xyz[0][molec_id], xyz[1][molec_id], xyz[2][molec_id], s=150, c=graph_std, cmap="YlOrBr")#, label=lab)
+    sc = ax.scatter(xyz[0][molec_id], xyz[1][molec_id], xyz[2][molec_id], s=150, c=graph_std, cmap="YlOrBr", alpha=1, zorder=2)#, label=lab)
     for i in range(len(atoms[molec_id])):
-        ax.text(xyz[0][molec_id][i], xyz[1][molec_id][i], xyz[2][molec_id][i], atoms[molec_id][i], size=20, zorder=1)
+        txt = ax.text(xyz[0][molec_id][i]+0.1, xyz[1][molec_id][i]+0.1, xyz[2][molec_id][i]+0.1, atoms[molec_id][i], size=20, zorder=20)
+        txt.set_path_effects([PathEffects.withStroke(linewidth=5,foreground='w')])
+    plt.draw()    
+    
+    for i in range(len(connectivity)):
+        for j in range(len(connectivity[i])):
+            if connectivity[i][j] == 1:
+                ax.plot([xyz[0][molec_id][i],xyz[0][molec_id][j]],[xyz[1][molec_id][i],xyz[1][molec_id][j]],[xyz[2][molec_id][i],xyz[2][molec_id][j]], c="xkcd:black", zorder=1)
+
     plt.colorbar(sc)
     plt.show()
     return

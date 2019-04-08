@@ -194,7 +194,32 @@ def get_test_mask(atom_nums, train_atom_nums):
         mask.append(molec_mask)
     mask = np.array(mask)
     return mask
- 
+
+def get_connectivity_mat(xyz):
+    molec_rij = []
+    molec_dr = []
+    # first loop over atoms
+    for i_atom in range(len(xyz)):
+        atom_rij = []
+        atom_dr = []
+        # second loop over atoms
+        for j_atom in range(len(xyz)):
+            x_diff = xyz[i_atom][0] - xyz[j_atom][0]
+            y_diff = xyz[i_atom][1] - xyz[j_atom][1]
+            z_diff = xyz[i_atom][2] - xyz[j_atom][2]
+            atom_dr.append([x_diff, y_diff, z_diff])
+            atom_rij.append(LA.norm([x_diff, y_diff, z_diff]))
+        molec_dr.append(atom_dr)
+        molec_rij.append(atom_rij)
+    molec_dr = np.array(molec_dr)
+    molec_rij = np.array(molec_rij)
+    
+    connectivity = np.zeros(np.shape(molec_rij))
+    for i in range(len(connectivity)):
+        for j in range(len(connectivity[i])):
+            if molec_rij[i][j] < 1.7:
+                connectivity[i][j] = 1
+    return connectivity 
 
 def get_mask(atom_nums):
     seen_atoms = []
