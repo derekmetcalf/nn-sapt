@@ -105,7 +105,7 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
 if __name__ == "__main__":
     
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    inputdirs = ["./SSI_neutral"]
+    inputdirs = ["./spike2"]
     aname = []
     atom_tensor = []
     xyz = []
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     epochs = 200
     n_layer = len(nodes)
     mt_vec = [1, 0, 0, 0, 0]
-    results_name = "SSI_neutral"
+    results_name = "SSI_extra_spiked"
     (model, atom_model) = standard_run(sym_input,atoms,results_name,
                     filenames,tot_en,elst,exch,
                     ind,disp,n_layer,nodes,mask,mt_vec,val_split,

@@ -129,7 +129,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 k = 0
 
-atoms = [H_tensor]
+#atoms = [H_tensor]
 #cmap = matplotlib.cm.get_cmap('viridis')
 #normalize = matplotlib.colors.Normalize(vmin=min(z), vmax=max(z))
 #col = [cmap(normalize(value) for value in z]

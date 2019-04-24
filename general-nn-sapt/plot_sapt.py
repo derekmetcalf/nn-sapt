@@ -24,16 +24,16 @@ def plot_sapt_from_file(filename, plot_title):
     for i in range(len(lines)):
 
         if i>6:
-            total.append(float(lines[i].split(",")[1]))
-            total_pred.append(float(lines[i].split(",")[2]))
-            elec.append(float(lines[i].split(",")[3]))
-            elec_pred.append(float(lines[i].split(",")[4]))
-            exch.append(float(lines[i].split(",")[5]))
-            exch_pred.append(float(lines[i].split(",")[6]))
-            ind.append(float(lines[i].split(",")[7]))
-            ind_pred.append(float(lines[i].split(",")[8]))
-            disp.append(float(lines[i].split(",")[9]))
-            disp_pred.append(float(lines[i].split(",")[10]))
+            total.append(float(lines[i].split(",")[1].replace("[","").replace("]","")))
+            total_pred.append(float(lines[i].split(",")[2].replace("[","").replace("]","")))
+            elec.append(float(lines[i].split(",")[3].replace("[","").replace("]","")))
+            elec_pred.append(float(lines[i].split(",")[4].replace("[","").replace("]","")))
+            exch.append(float(lines[i].split(",")[5].replace("[","").replace("]","")))
+            exch_pred.append(float(lines[i].split(",")[6].replace("[","").replace("]","")))
+            ind.append(float(lines[i].split(",")[7].replace("[","").replace("]","")))
+            ind_pred.append(float(lines[i].split(",")[8].replace("[","").replace("]","")))
+            disp.append(float(lines[i].split(",")[9].replace("[","").replace("]","")))
+            disp_pred.append(float(lines[i].split(",")[10].replace("[","").replace("]","")))
 
     file.close()
     
@@ -143,11 +143,11 @@ def plot_sapt_from_file(filename, plot_title):
     plt.show()
     return
 
-plot_sapt_from_file("./NMA-Aniline-doubled-crystal.csv",
+plot_sapt_from_file("./spiked_SSI_results.csv",
                     "NMA-Aniline Crystallographic Test Trained with Artificial Data")
-plot_sapt_from_file("./NMA-Aniline-0.1-crystal-pert.csv",
-                    "NMA-Aniline Crystallographic Test Trained with Artificial Data and Unlabeled Perturbed Dimers")
-plot_sapt_from_file("./artif_and_labeled_pert_crystal.csv",
-                    "NMA-Aniline Crystallographic Test Trained with Artificial Data and Labeled Perturbed Dimers")
-plot_sapt_from_file("./symfun_experiment_crystal.csv",
-                    "NMA-Aniline Crystallographic Test Trained with Artificial Data, Labeled Perturbed Dimers, and 'Intermolecular' Symmetry Functions")
+#plot_sapt_from_file("./NMA-Aniline-0.1-crystal-pert.csv",
+#                    "NMA-Aniline Crystallographic Test Trained with Artificial Data and Unlabeled Perturbed Dimers")
+#plot_sapt_from_file("./artif_and_labeled_pert_crystal.csv",
+#                    "NMA-Aniline Crystallographic Test Trained with Artificial Data and Labeled Perturbed Dimers")
+#plot_sapt_from_file("./symfun_experiment_crystal.csv",
+#                    "NMA-Aniline Crystallographic Test Trained with Artificial Data, Labeled Perturbed Dimers, and 'Intermolecular' Symmetry Functions")

@@ -184,18 +184,30 @@ def molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy"):
     
     connectivity = routines.get_connectivity_mat(xyz[molec_id])
 
-    fig = plt.figure()
+    fig = plt.figure(figsize = (12,10))
     ax = fig.add_subplot(111, projection='3d')
-
     xyz = np.transpose(np.array(xyz),(2,0,1))
+    """
+    xs = []
+    ys = []
+    zs = []
+    for i in range(len(xyz)):
+        for j in range(len(xyz[i])):
+            for k in range(len(xyz[i][j])):
+                xs.append(xyz
+                ys.append(xyz
+                zs.append(xyz
+    """
     graph_std = molec_stds[molec_id][:len(xyz[0][molec_id])]
     graph_en = molec_ens[molec_id][:len(xyz[0][molec_id])]
 
-    if prop == "energy": prop=graph_en
-    elif prop == "uncertainty": prop=graph_std
+    if prop == "energy":
+        prop=graph_en; vmin=-0.5; vmax=0.5; cmap=matplotlib.cm.RdBu_r
+    elif prop == "uncertainty": 
+        prop=graph_std; vmin=0; vmax=1; cmap="YlOrBr"
     else: print("invalid property for graphing"); quit()
     
-    sc = ax.scatter(xyz[0][molec_id], xyz[1][molec_id], xyz[2][molec_id], s=150, c=graph_std, cmap="YlOrBr", alpha=1, zorder=2)#, label=lab)
+    sc = ax.scatter(xyz[0][molec_id], xyz[1][molec_id], xyz[2][molec_id], s=150, c=prop, cmap=cmap, alpha=1, zorder=2, vmin=vmin, vmax=vmax)#, label=lab)
     for i in range(len(atoms[molec_id])):
         txt = ax.text(xyz[0][molec_id][i]+0.1, xyz[1][molec_id][i]+0.1, xyz[2][molec_id][i]+0.1, atoms[molec_id][i], size=20, zorder=20)
         txt.set_path_effects([PathEffects.withStroke(linewidth=5,foreground='w')])
@@ -205,8 +217,8 @@ def molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy"):
         for j in range(len(connectivity[i])):
             if connectivity[i][j] == 1:
                 ax.plot([xyz[0][molec_id][i],xyz[0][molec_id][j]],[xyz[1][molec_id][i],xyz[1][molec_id][j]],[xyz[2][molec_id][i],xyz[2][molec_id][j]], c="xkcd:black", zorder=1)
-
     plt.colorbar(sc)
+    plt.axis('equal')
     plt.show()
     return
 
@@ -227,7 +239,7 @@ if __name__ == "__main__":
 
     NNff = NNforce_field('GA_opt',0,0)
  
-    train_path = "./SSI_neutral"
+    train_path = "./spike2"
     (train_atoms, train_atom_nums, train_xyz) = routines.get_xyz_from_combo_files(train_path)
     max_train_atoms = 0
     for i in range(len(train_atoms)):
@@ -237,6 +249,7 @@ if __name__ == "__main__":
     path = "./NMA-Aniline-crystallographic_sym_inp"
     
     (atoms, atom_nums, xyz) = routines.get_xyz_from_combo_files(path)
+    print(np.array(xyz).shape)
     (filenames,tot_en,elst,exch,ind,disp,split_vec) = routines.get_sapt_from_combo_files(path)
     
     sym_input = []
@@ -248,12 +261,12 @@ if __name__ == "__main__":
     sym_input = routines.pad_sym_inp(sym_input, max_train_atoms=max_train_atoms)
     sym_input = np.concatenate((sym_input,mask),axis=2)
 
-    model = load_model("./SSI_neutral_model.h5")
-    atom_model = load_model("./SSI_neutral_atomic_model.h5")
-    results_name = "dropout_uncertainty_SSI_only"
-       
-    molec_id = 12 #which sample from dataset to graph
-    molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty")   
-    
+    model = load_model("./SSI_extra_spiked_model.h5")
+    atom_model = load_model("./SSI_extra_spiked_atomic_model.h5")
+    results_name = "extra_spiked_SSI"
+
+    molec_id = 4 #which sample from dataset to graph
+    molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty") 
+    #sym_input = np.transpose(sym_input, (1,0,2)) 
     #evaluate_model(model, sym_input, filenames, results_name, tot_en,
     #                    elst, exch, ind, disp, uncertainty=True)
