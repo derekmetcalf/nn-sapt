@@ -686,7 +686,8 @@ def construct_symmetry_input(NN, path, filenames, aname, ffenergy,
     """
     sym_path = path.replace("spatial_info", "sym_inp")
     if os.path.exists(sym_path) == False: 
-        os.mkdir(sym_path)
+        #os.mkdir(sym_path)
+        pass
     if None in split_vec:
         print("Using standard symmetry functions")
         Parallel(

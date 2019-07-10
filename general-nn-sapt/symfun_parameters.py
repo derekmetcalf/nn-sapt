@@ -16,14 +16,14 @@ class elementNN(object):
         self.angular_symmetry_functions = []
         self.weights = []
         # set default cutoff radius (Rc) for Gaussian symmetry functions
-        self.Rc = 11.5  # Bohr
+        self.Rc = 11.5  # Angstroms 
 
 
 class NNforce_field(object):
     """Define symmetry function parameter object
 
     Stores parameters that define the atomic symmetry functions.
-    
+ 
     HISTORICAL NOTE:
     These have nothing to do with force fields in the MM sense.
     Jesse McDaniel corresponds symmetry function parameters to 

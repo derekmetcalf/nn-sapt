@@ -107,13 +107,13 @@ if __name__ == "__main__":
     
     # Choose paths from which to extract input directories or list
     # directories explicitly. These will contain dm-xyzs and .npy symfuns 
-    paths = ["../data/5_28_19_pert-xyz-nrgs-derek-format", "../data/pert-xyz-nrgs-acceptors-derek-format"]
-    inputdirs = ["./new_SSI_spiked"]
+    #paths = ["./script_tests"]
+    inputdirs = ["./script_tests"]
     #inputdirs = []
-    for path in paths:
-        for r,d,f in os.walk(path):
-            for folder in d:
-                inputdirs.append(os.path.join(r,folder))
+    #for path in paths:
+    #    for r,d,f in os.walk(path):
+    #        for folder in d:
+    #            inputdirs.append(os.path.join(r,folder))
     
     # Extract necessary info for training from dm-xyz and symfun files
     aname = []
@@ -138,13 +138,17 @@ if __name__ == "__main__":
         path = inputdirs[i]
         print("Collecting properties and geometries...\n")
         t1 = time.time()
-        if "SSI_spiked" in path:
-            (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
-            (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
-        else:
-            (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=0.0125)
-            (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+        #if "SSI_spiked" in path:
+        #    (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
+        #    (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+        #else:
+        #    (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=0.0125)
+        #    (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
         
+        
+        (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
+        (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+
         for k in range(len(set_atom_nums)):
             atom_nums.append(set_atom_nums[k])
             atoms.append(set_atoms[k])
@@ -190,12 +194,12 @@ if __name__ == "__main__":
     l2_reg = 0.005
     nodes = [100,100,75]
     val_split = 0.10
-    epochs = 300
+    epochs = 10
     n_layer = len(nodes)
     mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
     
     # Choose output name
-    results_name = "neutral-SSI_0.0125-spike_100-100-75_retry"
+    results_name = "script_test_model_out"
 
     # Train models
     (model, atom_model) = standard_run(sym_input,atoms,results_name,

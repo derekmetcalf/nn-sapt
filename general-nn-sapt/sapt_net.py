@@ -85,7 +85,8 @@ def sapt_net(sym_input,
              simulations=1,
              folds=5,
              total_en_mode=False):
-    """Construct and train NN-SAPT model with provided parameters.
+    """
+    Construct and train NN-SAPT model with provided parameters.
 
     Keras allows for the construction of a different neural network model
     for each type of atom (C, H, O, etc.). The total output values (usually
@@ -95,7 +96,9 @@ def sapt_net(sym_input,
 
     Reasonable flexibility is allowed just by calling this function 
     with options, but considerable architectural changes will require
-    amendments to this function itself."""
+    amendments to this function itself.
+
+    """
 
     (ntype, atype, unique_list) = routines.create_atype_list(aname,
                                                 routines.atomic_dictionary())
