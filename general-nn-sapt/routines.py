@@ -458,6 +458,7 @@ def progress(count, total, suffix=''):
 
 def infer_on_test(model, sym_inp):
     """Perform inferences symmetry function input given a Keras model."""
+    #print(sym_inp)
     (en_pred, elec_pred, exch_pred, ind_pred,
         disp_pred) = model.predict_on_batch(sym_inp)
     return en_pred, elec_pred, exch_pred, ind_pred, disp_pred

@@ -41,7 +41,6 @@ def evaluate_model(model, sym_input, testing_files, results_name,
     sym_input = np.array(sym_input)
     sym_input = np.transpose(sym_input, (1, 0, 2))
     sym_input = list(sym_input)
-    
     if uncertainty == False:
         (energy_pred, elec_pred, exch_pred, ind_pred,
          disp_pred) = routines.infer_on_test(model, sym_input)
@@ -252,13 +251,13 @@ if __name__ == "__main__":
     NNff = NNforce_field('GA_opt',0,0)
     
     # Choose dirs used for training of these models (this could be automated)
-    inputdirs = ["./new_SSI_spiked"]
-    for r,d,f in os.walk("../data/5_28_19_pert-xyz-nrgs-derek-format"):
-        for folder in d:
-            inputdirs.append(os.path.join(r,folder))
-    for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format"):
-        for folder in d:
-            inputdirs.append(os.path.join(r,folder))
+    inputdirs = ["./script_tests"]
+    #for r,d,f in os.walk("../data/5_28_19_pert-xyz-nrgs-derek-format"):
+    #    for folder in d:
+    #        inputdirs.append(os.path.join(r,folder))
+    #for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format"):
+    #    for folder in d:
+    #        inputdirs.append(os.path.join(r,folder))
     #train_path = "./SSI_spiked_3"
     #train_path = "./SSI_spiked_2"
     
@@ -283,48 +282,51 @@ if __name__ == "__main__":
             max_train_atoms = len(train_atoms[i])
     
     # Choose test path(s)
-    for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format-test"):
-        for folder in d:
-            path = os.path.join(r,folder)
+    path = "./script_tests"
+    
+    #for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format-test"):
+    #    for folder in d:
+    #        path = os.path.join(r,folder)
             #print(path) 
             #path = "../data/20190413-test-molecules-10k-dm-format/NMA_Quinilone_random"
             #path = "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--1H-naphthalene-PLDB-89-dmformat-xyz"
         #path = "./SSI_neutral"
         
         # Gather test SAPT and descriptor info from path
-        (filenames, en_ph, elst_ph, exch_ph, ind_ph, disp_ph, vs_ph) = routines.get_sapt_from_combo_files(path)
-        (atoms, atom_nums, xyz) = routines.get_xyz_from_combo_files(path, filenames)
-        (filenames,tot_en,elst,exch,ind,disp,split_vec) = routines.get_sapt_from_combo_files(path)
-        (test_ntype, test_atype, test_unique_atoms) = routines.create_atype_list(atoms,routines.atomic_dictionary())
-     
-        sym_input = []
-        for i in range(len(filenames)):
-            file = f"{path}/{filenames[i]}_symfun.npy"
-            sym_input.append(np.load(file, allow_pickle=True))
-        mask = routines.get_test_mask(atom_nums, train_atom_nums)
-        mask = routines.pad_sym_inp(mask, max_train_atoms=max_train_atoms)
-        sym_input = routines.pad_sym_inp(sym_input, max_train_atoms=max_train_atoms)
-        sym_input = np.concatenate((sym_input,mask),axis=2)
-        
-        # Load in desired model to test from .h5 files
-        modelname = "neutral-SSI_0.0125-spike_100-100-75_retry"
-        testset = path.split("/")[-1]
+    (filenames, en_ph, elst_ph, exch_ph, ind_ph, disp_ph, vs_ph) = routines.get_sapt_from_combo_files(path)
+    (atoms, atom_nums, xyz) = routines.get_xyz_from_combo_files(path, filenames)
+    (filenames,tot_en,elst,exch,ind,disp,split_vec) = routines.get_sapt_from_combo_files(path)
+    (test_ntype, test_atype, test_unique_atoms) = routines.create_atype_list(atoms,routines.atomic_dictionary())
+    
+    sym_input = []
+    for i in range(len(filenames)):
+        file = f"{path}/{filenames[i]}_symfun.npy"
+        sym_input.append(np.load(file, allow_pickle=True))
+    mask = routines.get_test_mask(atom_nums, train_atom_nums)
+    mask = routines.pad_sym_inp(mask, max_train_atoms=max_train_atoms)
+    sym_input = routines.pad_sym_inp(sym_input, max_train_atoms=max_train_atoms)
+    sym_input = np.concatenate((sym_input,mask),axis=2)
+    
+    # Load in desired model to test from .h5 files
+    modelname = "script_test_model_out"
+    #testset = path.split("/")[-1]
 
-        model = load_model(f"./{modelname}_model.h5")
-        atom_model = load_model(f"./{modelname}_atomic_model.h5")
+    model = load_model(f"./{modelname}_model.h5")
+    atom_model = load_model(f"./{modelname}_atomic_model.h5")
 
-        # Choose results name
-        #results_name = f"./test_results/{modelname}{testset}"
-        results_name = "SSI_preds"
-        
-        ## Get a molecular view of molec_id in test set, either predicted
-        ## atomwise energy or atomwise uncertainty estimate
-        #molec_id = 5 #which sample from dataset to graph
+    # Choose results name
+    #results_name = f"./test_results/{modelname}{testset}"
+    results_name = "script_test_set_preds"
+    
+    ## Get a molecular view of molec_id in test set, either predicted
+    ## atomwise energy or atomwise uncertainty estimate
+    #molec_id = 5 #which sample from dataset to graph
 
-        #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy") 
-        #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty") 
-        # Evaluate model and save results to {results_name}.csv
+    #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy") 
+    #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty") 
+    # Evaluate model and save results to {results_name}.csv
 
-        sym_input = np.transpose(sym_input, (1,0,2)) 
-        evaluate_model(model, sym_input, filenames, results_name, tot_en,
-                            elst, exch, ind, disp, uncertainty=False)
+    #sym_input = np.transpose(sym_input, (1,0,2))
+    #print(sym_input.shape) 
+    evaluate_model(model, sym_input, filenames, results_name, tot_en,
+                        elst, exch, ind, disp, uncertainty=False)
