@@ -12,6 +12,7 @@ from keras import regularizers
 from sys import stdout
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
+import keras
 import routines
 import keras.backend as K
 import tensorflow as tf
@@ -20,7 +21,49 @@ import numpy as np
 import symmetry_functions as sym
 import FFenergy_openMM as saptff
 from symfun_parameters import *
+from IPython.display import clear_output
 
+class PlotLosses(keras.callbacks.Callback):
+    def on_train_begin(self, logs={}):
+        self.i = 0
+        self.x = []
+        self.losses = []
+        self.val_losses = []
+        
+        self.fig = plt.figure()
+        
+        self.logs = []
+
+    def on_epoch_end(self, epoch, logs={}):
+        
+        self.logs.append(logs)
+        self.x.append(self.i)
+        self.losses.append(logs.get('add_2_mean_absolute_error'))
+        self.val_losses.append(logs.get('val_add_2_mean_absolute_error'))
+        self.i += 1
+        
+        #clear_output(wait=True)
+        plt.ion()
+        plt.show()
+        plt.cla()
+        if epoch < 5:
+            plt.plot(self.x, self.losses, label="train MAE")
+            plt.plot(self.x, self.val_losses, label="val MAE")
+        elif epoch < 11:
+            plt.plot(self.x[4:], self.losses[4:], label="train MAE")
+            plt.plot(self.x[4:], self.val_losses[4:], label="val MAE")
+        elif epoch < 31:
+            plt.plot(self.x[10:], self.losses[10:], label="train MAE")
+            plt.plot(self.x[10:], self.val_losses[10:], label="val MAE")
+        else:
+            plt.plot(self.x[30:], self.losses[30:], label="train MAE")
+            plt.plot(self.x[30:], self.val_losses[30:], label="val MAE")
+
+        plt.legend()
+        plt.grid(alpha=0.2)
+        plt.draw()
+        plt.savefig("most_recent_train")
+        plt.pause(0.001)
 
 def sapt_net(sym_input,
              aname,
@@ -54,7 +97,7 @@ def sapt_net(sym_input,
     with options, but considerable architectural changes will require
     amendments to this function itself."""
 
-    (ntype, atype) = routines.create_atype_list(aname,
+    (ntype, atype, unique_list) = routines.create_atype_list(aname,
                                                 routines.atomic_dictionary())
     #sym_input = np.transpose(sym_input, (1,0,2))
     y = np.transpose(np.array([energy, elec, exch, ind, disp]))
@@ -66,12 +109,13 @@ def sapt_net(sym_input,
             max_atoms = len(aname[i])
     print(sym_input.shape)
     NNff = NNforce_field('GA_opt', 0, 0)
+    NNff2 = NNforce_field('GA_opt',0,0)
     NNunique = []
     
     X_train, X_test, y_train, y_test = train_test_split(
         sym_input, y, test_size=val_split)
-    X_train = sym_input
-    y_train = y
+    #X_train = sym_input
+    #y_train = y
     
     X_train = np.transpose(X_train, (1, 0, 2))
     X_test = np.transpose(X_test, (1, 0, 2))
@@ -112,8 +156,11 @@ def sapt_net(sym_input,
     for i_atom in range(max_atoms):
         ind_net_outs = []
         typeNN = NNff.element_force_field[aname[0][0]]
-        i_size = 2*(len(typeNN.radial_symmetry_functions) + len(
-            typeNN.angular_symmetry_functions))
+        typeNN_intra = NNff2.element_force_field[aname[0][0]]
+        i_size = len(typeNN.radial_symmetry_functions) + len(
+            typeNN.angular_symmetry_functions) + len(
+            typeNN_intra.radial_symmetry_functions) + len(
+            typeNN_intra.angular_symmetry_functions)
         atom_input = Input(shape=(i_size+len(NNunique), ))
         #atom_mask = Input(shape=(len(NNunique), ))
         sym_inp = Lambda(lambda x: K.slice(x,[0,0],[-1,i_size]),
@@ -186,9 +233,11 @@ def sapt_net(sym_input,
     print("Fitting neural network to property data...\n")
     t1 = time.time()
     
+    plot_losses = PlotLosses()
+    
     #tensorboard = TensorBoard(log_dir=f"logs/{time.time()}")
     history = model.fit(X_train, y_train, batch_size=batch_size,
-                        epochs=epochs)#callbacks=[tensorboard], epochs=epochs)
+                        validation_data=(X_test, y_test),epochs=epochs,verbose=2,callbacks=[plot_losses])#callbacks=[tensorboard], epochs=epochs)
     t2 = time.time()
     elapsed = math.floor((t2 - t1) / 60.0)
     print("Neural network fit in %s minutes\n" % elapsed)

@@ -184,6 +184,7 @@ def get_test_mask(atom_nums, train_atom_nums):
                 num_atomtypes += 1
                 seen_atoms.append(train_atom_nums[i][j])
                 atom_ind_dict.update({train_atom_nums[i][j] : num_atomtypes})
+                
     mask = []
     for i in range(len(atom_nums)):
         molec_mask = []
@@ -231,6 +232,7 @@ def get_mask(atom_nums):
                 num_atomtypes += 1
                 seen_atoms.append(atom_nums[i][j])
                 atom_ind_dict.update({atom_nums[i][j] : num_atomtypes})
+                print(atom_nums[i][j])
     mask = []
     for i in range(len(atom_nums)):
         molec_mask = []
@@ -260,8 +262,6 @@ def pad_sym_inp(sym_inp, max_train_atoms=0):
         for j in range(len(sym_inp[i])):
             for k in range(len(sym_inp[i][j])):
                 padded_inp[i][j][k] = sym_inp[i][j][k]
-
-        
     return padded_inp
 
 def combine_energies_xyz(energy_file, xyz_path, new_path):
@@ -303,22 +303,29 @@ def combine_energies_xyz(energy_file, xyz_path, new_path):
                 new_xyz.write(data[j+2])
     return
 
-def get_xyz_from_combo_files(path):
-    
+def get_xyz_from_combo_files(path, filenames):
+        
     atom_dict = atomic_dictionary()
     xyz = []
     atoms = []
     atom_nums = []
-    for file in glob.glob(f"{path}/*.xyz"):
+    #for file in glob.glob(f"{path}/*.xyz"):
+    for filename in filenames:
+        if ".xyz" in filename:
+            file = f"{path}/{filename}"
+        else:
+            file = f"{path}/{filename}.xyz"
         with open(file, "r") as xyzfile:
             next(xyzfile)
             next(xyzfile)
             molec_atoms = []
             molec_xyz = []
             molec_atom_nums = []
+            #print(file)
             for line in xyzfile:
                 data = line.split()
                 molec_atoms.append(data[0])
+                #print(data[0])
                 molec_atom_nums.append(atom_dict[data[0]])
                 molec_xyz.append([float(data[1]), float(data[2]), float(data[3])])
             atoms.append(molec_atoms)
@@ -326,7 +333,7 @@ def get_xyz_from_combo_files(path):
             atom_nums.append(molec_atom_nums)
     return atoms, atom_nums, xyz
 
-def get_sapt_from_combo_files(path):
+def get_sapt_from_combo_files(path, keep_prob=1.00):
     """Collect SAPT energies and corresponding filenames from the combo xyz
     file / energy files written by routines.combine_energies_xyz
 
@@ -339,6 +346,9 @@ def get_sapt_from_combo_files(path):
     disp = []
     split_vec = []
     for file in glob.glob(f"{path}/*.xyz"):
+        rand_num = np.random.rand()
+        if rand_num > keep_prob:
+            continue
         #print(file)
         with open(file, "r") as saptfile:
             temp = saptfile.readlines()
@@ -539,10 +549,41 @@ def create_atype_list(aname, atomic_dict):
                 unique_list.append(aname[i][j])
             atype_molecule.append(unique_list.index(aname[i][j]))
         atype.append(atype_molecule)
-    print(unique_list)
+    #print(unique_list)
     ntype = len(unique_list)
-    return ntype, atype
+    return ntype, atype, unique_list
 
+def get_permutation_vector(test_atom_list, train_atom_list):
+    """Permute / add to atomtype vecs to rectify test set symfun ordering"""
+    permute_vec = []
+    not_in_set = []
+    for i, atomtype in enumerate(test_atom_list):
+        if atomtype in train_atom_list:
+            train_atom_index = train_atom_list.index(atomtype)
+            permute_vec.append(train_atom_index)
+        else:
+            print("Error: Trying to test on atoms outside the training set")
+            quit()
+    while len(train_atom_list) > len(permute_vec):
+        permute_vec.append(len(permute_vec))
+    return permute_vec
+
+def permute_atoms(sym_input_in, permute_vec, test_unique_atoms):
+    diff = len(permute_vec) - len(test_unique_atoms)
+    sym_input = np.zeros((sym_input_in.shape[0],sym_input_in.shape[1],sym_input_in.shape[2]))#+diff))
+    for l in range(len(permute_vec)):
+        permute_vec[l] = permute_vec[l] - len(permute_vec)
+    for i in range(len(sym_input_in)):
+        for j in range(len(sym_input_in[i])):
+            for k in range(len(sym_input_in[i][j])):
+                sym_input[i][j][k] = sym_input_in[i][j][k]
+            temp_encoding = np.zeros(len(permute_vec))
+            for index, permute_index in enumerate(permute_vec):
+                temp_encoding[index] = sym_input[i][j][permute_index]
+            for index, new_val in enumerate(temp_encoding):
+                native_index = index - len(temp_encoding) #- 1
+                sym_input[i][j][native_index] = temp_encoding[index]
+    return sym_input
 
 def compute_displacements(xyz, path, filenames):
     """Compute displacement tensor from input cartesian coordinates."""
@@ -625,7 +666,8 @@ def theta_tensor_single(path, i, filename):
     return
 
 def construct_symmetry_input(NN, path, filenames, aname, ffenergy, 
-                                atomic_num_tensor, val_split, split_vec=None):
+                                atomic_num_tensor, val_split, 
+                                NN_B=None, split_vec=None):
     """Construct symmetry function input for given dataset.
  
     NOTE: We assume we are using a shared layer NN structure, where
@@ -649,13 +691,15 @@ def construct_symmetry_input(NN, path, filenames, aname, ffenergy,
     if os.path.exists(sym_path) == False: 
         os.mkdir(sym_path)
     if None in split_vec:
+        print("Using standard symmetry functions")
         Parallel(
             n_jobs=4, verbose=1)(delayed(sym_inp_single)(
                 sym_path, path, filenames[j_molec], j_molec, aname, NN, atomic_num_tensor[j_molec]) for j_molec in range(len(aname)))
     elif len(split_vec) == len(filenames):
+        print("Using intermolecular symmetry functions")
         Parallel(
             n_jobs=4, verbose=1)(delayed(split_sym_inp_single)(
-                sym_path, path, filenames[j_molec], j_molec, aname, NN, atomic_num_tensor[j_molec], split_vec[j_molec]) for j_molec in range(len(aname)))
+                sym_path, path, filenames[j_molec], j_molec, aname, NN, NN_B, atomic_num_tensor[j_molec], split_vec[j_molec]) for j_molec in range(len(aname)))
         
     else: print("split_vec and filename list length mismatch")
     return
@@ -693,14 +737,14 @@ def sym_inp_single(sym_path, path, filename, j_molec, aname, NN, atomic_num_slic
         input_atom))  #only supports when all atoms have same # of features
     return
 
-def split_sym_inp_single(sym_path, path, filename, j_molec, aname, NN, atomic_num_slice,split_val=None):
+def split_sym_inp_single(sym_path, path, filename, j_molec, aname, NN_A, NN_B, atomic_num_slice,split_val=None):
     """Compute split symmetry function nested lists for a single molecule."""
     outfile = "%s/%s_symfun.npy" % (sym_path, filename)
     rij = np.load("%s/%s_rij.npy" % (path, filename))
     theta = np.load("%s/%s_theta.npy" % (path, filename))
     input_atom = []
     for i_atom in range(len(aname[j_molec])):
-        typeNN = NN.element_force_field[aname[j_molec][i_atom]]
+        typeNN = NN_A.element_force_field[aname[j_molec][i_atom]]
         input_i = []
         for i_sym in range(len(typeNN.radial_symmetry_functions)):
             G1 = sym.split_radial_gaussian(
@@ -716,7 +760,8 @@ def split_sym_inp_single(sym_path, path, filename, j_molec, aname, NN, atomic_nu
                 typeNN.angular_symmetry_functions[i_sym][2], typeNN.Rc,
                 atomic_num_slice, split_val=split_val, cross_terms=False)
             input_i.append(G2)
-        
+
+        typeNN = NN_B.element_force_field[aname[j_molec][i_atom]] 
         for i_sym in range(len(typeNN.radial_symmetry_functions)):
             #looping over symfuns for this atom
             G1 = sym.split_radial_gaussian(

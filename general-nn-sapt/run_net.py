@@ -102,30 +102,53 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
     """
     return model, atom_model
 
-if __name__ == "__main__":
-    
+if __name__ == "__main__": 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    inputdirs = ["./spike2"]
+    paths = ["../data/5_28_19_pert-xyz-nrgs-derek-format", "../data/pert-xyz-nrgs-acceptors-derek-format"]
+    inputdirs = ["./new_SSI_spiked"]
+    #inputdirs = []
+    for path in paths:
+        for r,d,f in os.walk(path):
+            for folder in d:
+                inputdirs.append(os.path.join(r,folder))
+    
     aname = []
     atom_tensor = []
     xyz = []
-    elec = []
+    elst = []
     ind = []
     disp = []
     exch = []
-    energy = []
+    tot_en = []
     geom_files = []
+    sym_input = []
+    symfun_files = []
+    atom_nums = []
+    atoms = []
+    filenames = []
     for i in range(len(inputdirs)):
-        sym_input = []
+
         path = inputdirs[i]
         print("Collecting properties and geometries...\n")
         t1 = time.time()
-        NN = NNforce_field('GA_opt', 0, 0)
-        (atoms,atom_nums,xyz) = routines.get_xyz_from_combo_files(path)
-        (filenames,tot_en,elst,exch,ind,disp,val_split) = routines.get_sapt_from_combo_files(path)
-        mask = routines.get_mask(atom_nums)
-        mask = routines.pad_sym_inp(mask)
-        print(f"mask shape: {mask.shape}")
+        if "SSI_spiked" in path:
+            (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
+            (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+        else:
+            (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=0.0125)
+            (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+        
+        for k in range(len(set_atom_nums)):
+            atom_nums.append(set_atom_nums[k])
+            atoms.append(set_atoms[k])
+            filenames.append(set_filenames[k])
+            tot_en.append(set_tot_en[k])
+            elst.append(set_elst[k])
+            exch.append(set_exch[k])
+            ind.append(set_ind[k])
+            disp.append(set_disp[k])
+            xyz.append(set_xyz[k])
+
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
         print("Properties and geometries collected in %s seconds\n" % elapsed)
@@ -133,35 +156,46 @@ if __name__ == "__main__":
         print("Loading symmetry functions from file...\n")
         t1 = time.time()
 
-        symfun_files = [] 
-        for i in range(len(filenames)):
-            file = f"{path}/{filenames[i]}_symfun.npy"
-            symfun_files.append(file)
-            sym_input.append(np.load(file))
 
-        #sym_input = routines.scale_symmetry_input(sym_input)
-        sym_input = np.array(sym_input) 
-        sym_input = routines.pad_sym_inp(sym_input)
-        print(f"sym inp shape: {sym_input.shape}")
-        
-        sym_input = np.concatenate((sym_input, mask), axis=2)
+        for j in range(len(set_filenames)):
+            file = f"{path}/{set_filenames[j]}_symfun.npy"
+            symfun_files.append(file)
+            sym_input.append(np.load(file, allow_pickle=True))
+
+
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
+        #print("symmetry input shape: " + sym_input.shape)
         print("Symmetry functions loaded in %s seconds\n" % elapsed)
+    print(f"atom_nums len: {len(atom_nums)}")
+    print(f"atom_nums[0]: {atom_nums[0]}")
+    mask = routines.get_mask(atom_nums)
+    mask = routines.pad_sym_inp(mask)
+    print(f"mask shape: {mask.shape}")
+    #sym_input = routines.scale_symmetry_input(sym_input)
+    sym_input = np.array(sym_input) 
+    sym_input = routines.pad_sym_inp(sym_input)
+    
+    sym_input = np.concatenate((sym_input, mask), axis=2)
+    print(f"sym inp shape: {sym_input.shape}")
+    #print(sym_input[0][0])
+    #print(sym_input[5][9])
+    #print(sym_input[2][3])
+    (ntype, atype, unique_atoms) = routines.create_atype_list(atoms,routines.atomic_dictionary()) 
+    #print(unique_atoms)
 
     dropout_fraction = 0.05
-    l2_reg = 0.01
-    nodes = [50,50,50]
-    val_split = 0.05
-    epochs = 200
+    l2_reg = 0.005
+    nodes = [100,100,75]
+    val_split = 0.10
+    epochs = 300
     n_layer = len(nodes)
-    mt_vec = [1, 0, 0, 0, 0]
-    results_name = "SSI_extra_spiked"
+    mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
+    results_name = "neutral-SSI_0.0125-spike_100-100-75_retry"
     (model, atom_model) = standard_run(sym_input,atoms,results_name,
                     filenames,tot_en,elst,exch,
                     ind,disp,n_layer,nodes,mask,mt_vec,val_split,
                     dropout_fraction,l2_reg,epochs,results_name)
-
     #for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
     #    mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
         #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))

@@ -6,6 +6,7 @@ import math
 import time
 import routines
 import itertools
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import FFenergy_openMM as saptff
@@ -116,30 +117,31 @@ O_tensor = np.array(O_tensor)
 F_tensor = np.array(F_tensor)
 S_tensor = np.array(S_tensor)
 
-#n_components=8
-#gmm = GaussianMixture(n_components=n_components).fit(sym_input)
+n_components = 8
+gmm = GaussianMixture(n_components=n_components).fit(sym_input)
+
 atoms = [H_tensor, C_tensor, N_tensor, O_tensor, F_tensor, S_tensor]
 labels = ['H', 'C', 'N', 'O', 'F', 'S']
 colors = ['b', 'r', 'g', 'c', 'xkcd:orange','xkcd:purple']
 
 total = H_count + C_count + N_count + O_count + F_count + S_count
 
+
 #for label in range(n_components):
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 k = 0
 
-#atoms = [H_tensor]
-#cmap = matplotlib.cm.get_cmap('viridis')
+atoms = [H_tensor]
+cmap = matplotlib.cm.get_cmap('viridis')
 #normalize = matplotlib.colors.Normalize(vmin=min(z), vmax=max(z))
-#col = [cmap(normalize(value) for value in z]
+#col = [cmap(normalize(value)) for value in z]
 for atom in atoms:
     if len(atom) > 0:
         col = colors[k]
         lab = labels[k]
         ax.scatter(atom[:, 0], atom[:, 1], atom[:, 2], s=0.2, 
-                   c=col, label=lab)
-        
+                   c=cmap, label=lab)
         k += 1
 ax.legend()
 plt.show()

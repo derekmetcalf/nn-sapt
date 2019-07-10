@@ -4,8 +4,10 @@ import numpy as np
 from multiprocessing import pool
 from numpy import linalg as LA
 """
-these are symmetry functions used as
-input to the neural network
+These are symmetry functions used as input to an ML model. They may be
+intramolecular, using generic radial_gaussian and angular_gaussian 
+functions or the intermolecular via the "split_" variant.
+
 """
 
 
@@ -49,10 +51,14 @@ def angular_gaussian(rij, theta, i_atom, width, shift,
                 1 + lam * np.cos(theta[i_atom][j_atom][k_atom]))
     return Gi
 
-
 def split_radial_gaussian(rij, i_atom, width, rshift, Rc, Zi, 
                         split_val=None, cross_terms=False):
-    """Construct radial symmetry function as a sum of weighted Gaussians."""
+    """
+    Construct radial symmetry function as a sum of weighted Gaussians.
+    Is either an internal symfun with cross_terms = False or external
+    with cross_tems = True .
+
+    """
     Gi = 0
     for j_atom in range(len(rij)):
         if i_atom<split_val:
@@ -78,7 +84,11 @@ def split_radial_gaussian(rij, i_atom, width, rshift, Rc, Zi,
 
 def split_angular_gaussian(rij, theta, i_atom, width, shift, 
                         lam, Rc, atomic_num, split_val=None, cross_terms=False):
-    """Construct angular symmetry function."""
+    """
+    Construct angular symmetry function. Is either called as an internal
+    symfun with cross_terms = False or external with cross_terms = True
+    
+    """
     Gi = 0
     for j_atom in range(len(rij)):
         fcij = cutoff_function(rij[i_atom][j_atom], Rc)
@@ -111,4 +121,3 @@ def split_angular_gaussian(rij, theta, i_atom, width, shift,
             Gi = Gi + cutoff * atom_function * gauss * (
                 1 + lam * np.cos(theta[i_atom][j_atom][k_atom]))
     return Gi
-

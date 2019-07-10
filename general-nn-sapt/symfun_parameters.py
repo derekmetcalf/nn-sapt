@@ -31,7 +31,7 @@ class NNforce_field(object):
     determine preditcions of a system much like FF parameters. Since 
     Dr. McDaniel wrote an early version of this code, this name has 
     been embedded deeply in the lore of NN-SAPT and would frankly 
-    be hard to take out at this point.
+    be annoying to take out at this point.
     """
 
     def __init__(self, name, i, j):
@@ -46,6 +46,8 @@ class NNforce_field(object):
             self.initialize_FF3()
         elif name is 'GA_opt':
             self.initialize_GA_opt()
+        elif name is 'intramolecular':
+            self.initialize_intramolecular()
         else:
             print("symmetry funciton name ", name, "  is not recognized")
             sys.exit()
@@ -620,6 +622,158 @@ class NNforce_field(object):
         sulfurNN.radial_symmetry_functions.append((6.3775510, 4.42))
         sulfurNN.radial_symmetry_functions.append((6.3775510, 4.14))
         sulfurNN.radial_symmetry_functions.append((6.3775510, 3.86))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 3.58))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 3.30))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 3.02))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 2.74))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 2.46))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 2.18))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 1.90))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 1.62))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 1.34))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 1.06))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 0.78))
+        sulfurNN.radial_symmetry_functions.append((6.3775510, 0.50))
+
+        sulfurNN.angular_symmetry_functions.append((0.0836777, 0, -1))
+        sulfurNN.angular_symmetry_functions.append((0.0836777, 0, 1))
+        sulfurNN.angular_symmetry_functions.append((0.1685744, 0, -1))
+        sulfurNN.angular_symmetry_functions.append((0.1685744, 0, 1))
+        sulfurNN.angular_symmetry_functions.append((0.5, 0, -1))
+        sulfurNN.angular_symmetry_functions.append((0.5, 0, 1))
+    
+
+    def initialize_intramolecular(self):
+        """Initializes symmetry function parameters.
+
+        These particular parameters are to be used for intramolecular
+        symmetry functions for the learning of intermolecular properties, 
+        so these are usually closer-range and just encode the local atomic
+        information.
+        """
+
+        # create a dictionary to look up force field object for each element
+        self.element_force_field = {}
+
+        hydrogenNN = elementNN()
+        self.element_force_field["H"] = hydrogenNN
+        # add list of symmetry function tuples
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 3.58))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 3.30))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 3.02))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 2.74))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 2.46))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 2.18))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 1.90))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 1.62))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 1.34))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 1.06))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 0.78))
+        hydrogenNN.radial_symmetry_functions.append((6.3775510, 0.50))
+
+        hydrogenNN.angular_symmetry_functions.append((0.0836777, 0.0, -1))
+        hydrogenNN.angular_symmetry_functions.append((0.0836777, 0.0, 1))
+        hydrogenNN.angular_symmetry_functions.append((0.1685744, 0.0, -1))
+        hydrogenNN.angular_symmetry_functions.append((0.1685744, 0.0, 1))
+        hydrogenNN.angular_symmetry_functions.append((0.5, 0.0, -1))
+        hydrogenNN.angular_symmetry_functions.append((0.5, 0.0, 1))
+
+        oxygenNN = elementNN()
+        self.element_force_field["O"] = oxygenNN
+        # add list of symmetry function tuples
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 3.58))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 3.30))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 3.02))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 2.74))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 2.46))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 2.18))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 1.90))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 1.62))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 1.34))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 1.06))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 0.78))
+        oxygenNN.radial_symmetry_functions.append((6.3775510, 0.50))
+
+        oxygenNN.angular_symmetry_functions.append((0.0836777, 0, -1))
+        oxygenNN.angular_symmetry_functions.append((0.0836777, 0, 1))
+        oxygenNN.angular_symmetry_functions.append((0.1685744, 0, -1))
+        oxygenNN.angular_symmetry_functions.append((0.1685744, 0, 1))
+        oxygenNN.angular_symmetry_functions.append((0.5, 0, -1))
+        oxygenNN.angular_symmetry_functions.append((0.5, 0, 1))
+
+        carbonNN = elementNN()
+        self.element_force_field["C"] = carbonNN
+        # add list of symmetry function tuples
+        carbonNN.radial_symmetry_functions.append((6.3775510, 3.86))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 3.58))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 3.30))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 3.02))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 2.74))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 2.46))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 2.18))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 1.90))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 1.62))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 1.34))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 1.06))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 0.78))
+        carbonNN.radial_symmetry_functions.append((6.3775510, 0.50))
+
+        carbonNN.angular_symmetry_functions.append((0.0836777, 0, -1))
+        carbonNN.angular_symmetry_functions.append((0.0836777, 0, 1))
+        carbonNN.angular_symmetry_functions.append((0.1685744, 0, -1))
+        carbonNN.angular_symmetry_functions.append((0.1685744, 0, 1))
+        carbonNN.angular_symmetry_functions.append((0.5, 0, -1))
+        carbonNN.angular_symmetry_functions.append((0.5, 0, 1))
+
+        nitrogenNN = elementNN()
+        self.element_force_field["N"] = nitrogenNN
+        # add list of symmetry function tuples
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 3.58))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 3.30))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 3.02))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 2.74))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 2.46))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 2.18))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 1.90))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 1.62))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 1.34))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 1.06))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 0.78))
+        nitrogenNN.radial_symmetry_functions.append((6.3775510, 0.50))
+
+        nitrogenNN.angular_symmetry_functions.append((0.0836777, 0, -1))
+        nitrogenNN.angular_symmetry_functions.append((0.0836777, 0, 1))
+        nitrogenNN.angular_symmetry_functions.append((0.1685744, 0, -1))
+        nitrogenNN.angular_symmetry_functions.append((0.1685744, 0, 1))
+        nitrogenNN.angular_symmetry_functions.append((0.5, 0, -1))
+        nitrogenNN.angular_symmetry_functions.append((0.5, 0, 1))
+
+        fluorineNN = elementNN()
+        self.element_force_field["F"] = fluorineNN
+        # add list of symmetry function tuples
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 3.58))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 3.30))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 3.02))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 2.74))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 2.46))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 2.18))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 1.90))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 1.62))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 1.34))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 1.06))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 0.78))
+        fluorineNN.radial_symmetry_functions.append((6.3775510, 0.50))
+
+        fluorineNN.angular_symmetry_functions.append((0.0836777, 0, -1))
+        fluorineNN.angular_symmetry_functions.append((0.0836777, 0, 1))
+        fluorineNN.angular_symmetry_functions.append((0.1685744, 0, -1))
+        fluorineNN.angular_symmetry_functions.append((0.1685744, 0, 1))
+        fluorineNN.angular_symmetry_functions.append((0.5, 0, -1))
+        fluorineNN.angular_symmetry_functions.append((0.5, 0, 1))
+
+        sulfurNN = elementNN()
+        self.element_force_field["S"] = sulfurNN
+        # add list of symmetry function tuples
         sulfurNN.radial_symmetry_functions.append((6.3775510, 3.58))
         sulfurNN.radial_symmetry_functions.append((6.3775510, 3.30))
         sulfurNN.radial_symmetry_functions.append((6.3775510, 3.02))
