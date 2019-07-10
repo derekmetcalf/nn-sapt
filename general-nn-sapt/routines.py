@@ -14,9 +14,6 @@ import tensorflow as tf
 """
 Perform miscellaneous standard functions of the NN-SAPT paradigm.
 
-Routines includes the ever-changing "DataSet" class with which all datasets
-are parsed and stored as tensors of (relatively) standard format. 
-
 """
 
 

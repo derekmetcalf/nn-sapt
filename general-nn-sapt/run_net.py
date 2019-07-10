@@ -26,18 +26,21 @@ from symfun_parameters import *
 """Train one or many neural networks.
 
 This document is "runtime-maintained" and care should be taken in blindly 
-running it. As a research tool, it is an exercise in bad Python and it may
-be less time-consuming for a NN-SAPT novice to write their own run script
-for their purposes.
+running it. It may be less time-consuming for a NN-SAPT novice to write 
+their own run script for their purposes.
  
 """
 
 
-
-#train 1 net as specified
 def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
                 ind,disp,n_layer,nodes,mask,mt_vec,val_split,
                 dropout_fraction,l2_reg,epochs, results_name):
+    """
+    Train Behler-Parrinello neural network with provided symmetry function
+    input, labels, network architecture and architecture. Output trained
+    models and write training results to .csv .
+
+    """
     (model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
      test_disp, disp_pred, test_ind, ind_pred, avg_mae,
      std_mae, atom_model) = sapt_net.sapt_net(
@@ -92,18 +95,18 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
         writer = csv.writer(writeFile)
         writer.writerows(csv_file)
     writeFile.close()
-    """ 
-    test_xyz_path = None
-    data_obj = routines.DataSet(test_xyz_path,"../data/crystallographic_data/2019-01-05-CSD-NMA-Aniline-xyz-nrgs-outs/FSAPT0/SAPT0-NRGS-COMPONENTS.txt",None,"kcal/mol")
-    (_aname,_atom_tensor,_xyz,testing_elec,testing_ind,testing_disp,testing_exch,
-                testing_energy,geom_files) = data_obj.read_from_target_list()
-    model_tests.evaluate_model(model, "NMA-Aniline-crystallographic", geom_files, results_name, testing_energy, testing_elec, testing_exch, testing_ind, testing_disp)
-    K.clear_session()
-    """
+    
     return model, atom_model
 
-if __name__ == "__main__": 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+if __name__ == "__main__":
+    """
+    Choose model training characteristics and execute. 
+    TODO: Wrap preprocessing as a class? Very ugly currently
+
+    """ 
+    
+    # Choose paths from which to extract input directories or list
+    # directories explicitly. These will contain dm-xyzs and .npy symfuns 
     paths = ["../data/5_28_19_pert-xyz-nrgs-derek-format", "../data/pert-xyz-nrgs-acceptors-derek-format"]
     inputdirs = ["./new_SSI_spiked"]
     #inputdirs = []
@@ -112,6 +115,7 @@ if __name__ == "__main__":
             for folder in d:
                 inputdirs.append(os.path.join(r,folder))
     
+    # Extract necessary info for training from dm-xyz and symfun files
     aname = []
     atom_tensor = []
     xyz = []
@@ -127,6 +131,9 @@ if __name__ == "__main__":
     atoms = []
     filenames = []
     for i in range(len(inputdirs)):
+
+        # The following are custom choices for training on SSI directories
+        # and fractions of non-SSI directories via the keep_prob argument
 
         path = inputdirs[i]
         print("Collecting properties and geometries...\n")
@@ -165,25 +172,20 @@ if __name__ == "__main__":
 
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
-        #print("symmetry input shape: " + sym_input.shape)
         print("Symmetry functions loaded in %s seconds\n" % elapsed)
     print(f"atom_nums len: {len(atom_nums)}")
     print(f"atom_nums[0]: {atom_nums[0]}")
     mask = routines.get_mask(atom_nums)
     mask = routines.pad_sym_inp(mask)
     print(f"mask shape: {mask.shape}")
-    #sym_input = routines.scale_symmetry_input(sym_input)
     sym_input = np.array(sym_input) 
     sym_input = routines.pad_sym_inp(sym_input)
     
     sym_input = np.concatenate((sym_input, mask), axis=2)
     print(f"sym inp shape: {sym_input.shape}")
-    #print(sym_input[0][0])
-    #print(sym_input[5][9])
-    #print(sym_input[2][3])
     (ntype, atype, unique_atoms) = routines.create_atype_list(atoms,routines.atomic_dictionary()) 
-    #print(unique_atoms)
 
+    # Define training parameters
     dropout_fraction = 0.05
     l2_reg = 0.005
     nodes = [100,100,75]
@@ -191,11 +193,18 @@ if __name__ == "__main__":
     epochs = 300
     n_layer = len(nodes)
     mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
+    
+    # Choose output name
     results_name = "neutral-SSI_0.0125-spike_100-100-75_retry"
+
+    # Train models
     (model, atom_model) = standard_run(sym_input,atoms,results_name,
                     filenames,tot_en,elst,exch,
                     ind,disp,n_layer,nodes,mask,mt_vec,val_split,
                     dropout_fraction,l2_reg,epochs,results_name)
+    
+
+    ## The following is written for training many MTP models
     #for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
     #    mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
         #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
