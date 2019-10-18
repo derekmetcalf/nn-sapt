@@ -884,32 +884,35 @@ def custom_loss(y_true, y_pred):
 
 
 def scale_symmetry_input(sym_input):
-    """Scale a given symmetry input to lie within the range [-1,1]."""
-    small = 1E-6
-    # loop over atoms
-    for i_atom in range(len(sym_input)):
-        # loop over symmetry functions
-        for i_sym in range(sym_input[i_atom].shape[1]):
-            # min and max values of this symmetry function across the data set
-            min_sym = np.amin(sym_input[i_atom][:, i_sym])
-            max_sym = np.amax(sym_input[i_atom][:, i_sym])
-            range_sym = max_sym - min_sym
+    """Scale symmetry input to mean 0 std dev 1."""
 
-            if range_sym > small:
-                for i_data in range(sym_input[i_atom].shape[0]):
-                    sym_input[i_atom][i_data, i_sym] = -1.0 + 2.0 * (
-                        (sym_input[i_atom][i_data, i_sym] - min_sym) /
-                        range_sym)
+    num_atoms = 0
+    for molec in range(len(sym_input)):
+        for atom in range(len(sym_input[molec])):
+            num_atoms += 1
+    
+    scale_params = np.zeros((len(sym_input[0][0]), num_atoms))
+    atom_ind = 0
+    for molec in range(len(sym_input)):
+        for atom in range(len(sym_input[molec])):
+            atom_ind +=1
+            for sym in range(len(sym_input[molec][atom])):
+                scale_params[sym][atom_ind-1] = sym_input[molec][atom][sym]
 
-            # shift symmetry function value so that histogram maximum is centered at 0
-            # this is for increasing sensitivity to tanh activation function
-            hist = np.histogram(sym_input[i_atom][:, i_sym], bins=20)
-            shift = np.argmax(hist[0])
-            array_shift = np.full_like(sym_input[i_atom][:, i_sym],
-                                       -1.0 + 2 * (shift / 20))
-            sym_input[i_atom][:, i_sym] = sym_input[
-                i_atom][:, i_sym] - array_shift[:]
-    return sym_input
+    means = []
+    stds = []
+    for i in range(len(scale_params)):
+        means.append(np.average(scale_params[i]))
+        stds.append(np.std(scale_params[i]))
+        scale_params[i] = scale_params[i] - means[i]
+        scale_params[i] = scale_params[i]/stds[i]
+    
+    for molec in range(len(sym_input)):        
+        for atom in range(len(sym_input[molec])):
+            atom_ind +=1
+            for sym in range(len(sym_input[molec][atom])):
+                sym_input[molec][atom][sym] = (sym_input[molec][atom][sym] - means[sym]) / stds[sym] 
+    return sym_input, means, stds 
 
 
 def test_symmetry_input(sym_input):

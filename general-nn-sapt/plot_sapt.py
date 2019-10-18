@@ -35,7 +35,6 @@ def plot_sapt_from_file(filename, plot_title):
             ind_pred.append(float(lines[i].split(",")[11].replace("[","").replace("]","")))
             disp.append(float(lines[i].split(",")[13].replace("[","").replace("]","")))
             disp_pred.append(float(lines[i].split(",")[14].replace("[","").replace("]","")))
-
     file.close()
     
     total = np.asarray(total)
@@ -292,8 +291,8 @@ def plot_sapt_from_folder(foldername, plot_title):
     return
 
 
-plot_sapt_from_file("./test_results/neutral-SSI_0.0125-spike_100-100-75Acc--NMe-acetamide_Don--Uracil-PDB--xyzcoords-nrgs-dmv2-format.csv",
-                    "Intermolecular BPNN Tested on Crystallographic NMe-acetamide / N-Isopropylethanimidic acid")
+plot_sapt_from_file("./s66_test_0.0125_100-100-75.csv",
+                    "Intermolecular BPNN Tested on S66 Dataset")
 #plot_sapt_from_folder("./test_results/0.0125",
 #                    "Intermolecular BPNN Tested on Crystallographic NMe-Acetamide / X Configurations")
 #plot_sapt_from_file("./NMA-Aniline-0.1-crystal-pert.csv",

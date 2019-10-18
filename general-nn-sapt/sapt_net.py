@@ -81,6 +81,7 @@ def sapt_net(sym_input,
              dropout_fraction,
              l2_reg,
              epochs,
+             geom_files,
              batch_size=32,
              simulations=1,
              folds=5,
@@ -115,17 +116,18 @@ def sapt_net(sym_input,
     NNff2 = NNforce_field('GA_opt',0,0)
     NNunique = []
     
-    X_train, X_test, y_train, y_test = train_test_split(
-        sym_input, y, test_size=val_split)
+    geom_files_train, geom_files_test, X_train, X_test, y_train, y_test = train_test_split(
+        geom_files, sym_input, y, test_size=val_split, shuffle=True, random_state=42)
     #X_train = sym_input
     #y_train = y
-    
+
     X_train = np.transpose(X_train, (1, 0, 2))
     X_test = np.transpose(X_test, (1, 0, 2))
     X_train = list(X_train)
     X_test = list(X_test)
     y_train = list(y_train.T)
     y_test = list(y_test.T)
+
 
     if total_en_mode == True:
         y_train = np.sum(y_train, axis=1)
@@ -164,6 +166,7 @@ def sapt_net(sym_input,
             typeNN.angular_symmetry_functions) + len(
             typeNN_intra.radial_symmetry_functions) + len(
             typeNN_intra.angular_symmetry_functions)
+        #i_size = 32
         atom_input = Input(shape=(i_size+len(NNunique), ))
         #atom_mask = Input(shape=(len(NNunique), ))
         sym_inp = Lambda(lambda x: K.slice(x,[0,0],[-1,i_size]),
@@ -220,8 +223,9 @@ def sapt_net(sym_input,
             total_predictions, elst_tensor, exch_tensor, ind_tensor,
             disp_tensor
         ])
+    adam = keras.optimizers.Adam(lr=0.0005)
     model.compile(
-        optimizer='adam',
+        optimizer=adam,
         loss="mean_squared_error",
         metrics=['mae'],
         loss_weights=multitarget_vec)
@@ -237,10 +241,11 @@ def sapt_net(sym_input,
     t1 = time.time()
     
     plot_losses = PlotLosses()
-    
+    es = keras.callbacks.EarlyStopping(monitor='val_add_2_mean_absolute_error', mode='min',patience=100) 
+    mc = keras.callbacks.ModelCheckpoint(f"{results_name}_model.h5", monitor="val_add_2_mean_absolute_error", save_best_only=True, verbose=1, mode="min")
     #tensorboard = TensorBoard(log_dir=f"logs/{time.time()}")
     history = model.fit(X_train, y_train, batch_size=batch_size,
-                        validation_data=(X_test, y_test),epochs=epochs,verbose=2,callbacks=[plot_losses])#callbacks=[tensorboard], epochs=epochs)
+                        validation_data=(X_test, y_test),epochs=epochs,verbose=2, callbacks=[es,mc])#callbacks=[tensorboard]
     t2 = time.time()
     elapsed = math.floor((t2 - t1) / 60.0)
     print("Neural network fit in %s minutes\n" % elapsed)
@@ -267,7 +272,7 @@ def sapt_net(sym_input,
 
     print("%.2f (+/-) %.2f" % (np.mean(val_scores), np.std(val_scores)))
     return model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred, test_disp, disp_pred, test_ind, ind_pred, np.mean(
-        val_scores), np.std(val_scores), atom_model
+        val_scores), np.std(val_scores), atom_model, geom_files_train, geom_files_test
 
 
 def sapt_errors(energy, energy_pred, elec, elec_pred, exch, exch_pred, disp,

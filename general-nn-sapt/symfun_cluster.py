@@ -24,8 +24,7 @@ space. Positive outcomes from this might have active learning implications.
 
 """
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-path = './SSI_spiked'
+path = './SSI_neutral'
 
 aname = []
 atom_tensor = []
@@ -38,8 +37,9 @@ energy = []
 geom_files = []
 
 sym_input = []
-(atoms,atom_nums,xyz) = routines.get_xyz_from_combo_files(path)
 (filenames,tot_en,elst,exch,ind,disp,val_split) = routines.get_sapt_from_combo_files(path)
+
+(atoms,atom_nums,xyz) = routines.get_xyz_from_combo_files(path, filenames)
 
 symfun_files = []
 for j in range(len(filenames)):
@@ -134,14 +134,14 @@ k = 0
 
 atoms = [H_tensor]
 cmap = matplotlib.cm.get_cmap('viridis')
-#normalize = matplotlib.colors.Normalize(vmin=min(z), vmax=max(z))
-#col = [cmap(normalize(value)) for value in z]
+normalize = matplotlib.colors.Normalize(vmin=min(z), vmax=max(z))
+col = [cmap(normalize(value)) for value in z]
 for atom in atoms:
     if len(atom) > 0:
         col = colors[k]
         lab = labels[k]
         ax.scatter(atom[:, 0], atom[:, 1], atom[:, 2], s=0.2, 
-                   c=cmap, label=lab)
+                   c=col, label=lab)
         k += 1
 ax.legend()
 plt.show()

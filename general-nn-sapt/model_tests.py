@@ -39,12 +39,14 @@ def evaluate_model(model, sym_input, testing_files, results_name,
 
 
     sym_input = np.array(sym_input)
-    sym_input = np.transpose(sym_input, (1, 0, 2))
-    sym_input = list(sym_input)
+
     if uncertainty == False:
+        sym_input = np.transpose(sym_input, (1, 0, 2))
+        sym_input = list(sym_input)
         (energy_pred, elec_pred, exch_pred, ind_pred,
          disp_pred) = routines.infer_on_test(model, sym_input)
     else:
+        sym_input = list(sym_input)
         (energy_pred, elec_pred, exch_pred,
          ind_pred, disp_pred, energy_sig,
          elec_sig, exch_sig, ind_sig,
@@ -149,6 +151,7 @@ def uncertainty_inferences(model, sym_input, simulations=1000):
         exch_dist.append(exch_single)
         ind_dist.append(ind_single)
         disp_dist.append(disp_single)
+    print(energy_dist)
     energy_pred = np.average(energy_dist,axis=0)
     elec_pred = np.average(elec_dist,axis=0)
     exch_pred = np.average(exch_dist,axis=0)
@@ -182,13 +185,15 @@ def molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy"):
         molec_stds.append(atom_stds)
     molec_ens = np.array(molec_ens)
     molec_stds = np.array(molec_stds)
-    print(np.average(molec_stds))
+    #print(np.average(molec_stds))
     #graph_en = molec_ens[molec_id]
     
     connectivity = routines.get_connectivity_mat(xyz[molec_id])
 
     fig = plt.figure(figsize = (12,10))
     ax = fig.add_subplot(111, projection='3d')
+    #print(len(xyz))
+    #print(np.array(xyz).shape)
     #xyz = np.transpose(np.array(xyz),(1,0))
     xyz = np.transpose(np.array(xyz),(2,0,1))
     """
@@ -240,24 +245,36 @@ def get_atom_outs(atom_model, sym_input, simulations=1000):
     atom_std = np.std(atom_sim, axis=0)
     return atom_output, atom_std
 
+def scale_sym_input(sym_input):
+    bias = [0.045121926845448836, 0.06685110826116826, 0.09854527719319243, 0.14302176306429296, 0.21642438688952337, 0.32187628153048925, 0.4383189538183894, 0.5881807544207095, 0.8552761217872247, 1.3020722321665452, 2.0212418508489907, 2.715372942029979, 3.086571956122772, 3.6687917523235125, 4.417917017290391, 4.951150025832645, 5.44453952620702, 7.4563305639949204, 10.304709814523116, 10.052600677704403, 6.7211839345073905, 5.8321970133750085, 7.220880143596443, 6.026042131945646, 2.6460355404113884, 1.2007967458040005, 47.7884604069902, 159.0398946829241, 15.440710812324745, 51.54779809439906, 0.5931149418911059, 2.242997311162061, 0.9754634324116452, 1.290634433884927, 1.64979419538944, 2.052906213195718, 2.4951055209147923, 2.9469728476657187, 3.364018283680732, 3.7223344625358084, 3.9932648399458865, 4.134850714585474, 4.117112371805091, 3.943899900744897, 3.6523230385428653, 3.248526643187187, 2.7465546881221994, 2.215764923916782, 1.6793462258101315, 1.2294563551009985, 0.9424436175592992, 0.7265049730765343, 0.41586802177187154, 0.21927548737709152, 0.2671969144911964, 0.3040325871821045, 0.15571040808450912, 0.031125876009223837, 11.714311012926304, 30.468282157048613, 1.6187855463883165, 4.687828724891707, 0.03314812970112537, 0.1429160755001379, 0.0,0.0,0.0,0.0,0.0,0.0]
+    multiplier = [0.28660264145046155, 0.3578880171705309, 0.46293581482017016, 0.5763662499179967, 0.7557747103030364, 0.9990966455568058, 1.186806417195226, 1.3361018401136686, 1.5602686699469384, 1.9904074398185212, 2.4100409600168446, 2.721615643470005, 2.8706622516870994, 3.3028836943328046, 3.6135238926378555, 3.6234688545375464, 3.5773763132846765, 4.544337357801568, 5.239031195056098, 4.08006130463718, 2.5578865552735954, 3.634104942090687, 4.598173103694901, 2.1001333309813996, 1.105193068691358, 0.4338102366344055, 41.86175085355946, 70.01266649525438, 13.950241836231735, 20.995563183019822, 0.5071176566641669, 0.9099538517258839, 1.2926737903738574, 1.531033799230931, 1.76542568677192, 1.9934027028468109, 2.2175599093777993, 2.4447519325987805, 2.6568158122425505, 2.8542641257798524, 3.0671630253810194, 3.310415496644588, 3.5653719673543187, 3.787512257144543, 3.9403482716435643, 3.9804336361808343, 3.8268752308726603, 3.529347294718805, 3.074632957193901, 2.624065865325729, 2.3536003388052125, 2.0874034001266066, 1.3444608478189422, 0.8469004915052069, 1.0738045733034947, 1.224858556736862, 0.6573640992747167, 0.13754697496505225, 18.408779237766748, 40.47036267926514, 3.8568557517840945, 10.938339696463233, 0.12189461404312532, 0.5152256228205875,1.0,1.0,1.0,1.0,1.0,1.0] 
+    print(len(bias))
+    print(np.array(sym_input).shape)
+    for i in range(len(sym_input)):
+        for j in range(len(sym_input[i])):
+            for k in range(len(sym_input[i][j])):
+                sym_input[i][j][k] = (sym_input[i][j][k]-bias[k])/multiplier[k]
+    return sym_input
+
 if __name__ == "__main__":
     """
     Choose target directories and test out models.
     Get errors and/or graph.
 
     """
-    
+
     # Choose symmetry functions used for generation
     NNff = NNforce_field('GA_opt',0,0)
     
     # Choose dirs used for training of these models (this could be automated)
-    inputdirs = ["./script_tests"]
-    #for r,d,f in os.walk("../data/5_28_19_pert-xyz-nrgs-derek-format"):
-    #    for folder in d:
-    #        inputdirs.append(os.path.join(r,folder))
-    #for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format"):
-    #    for folder in d:
-    #        inputdirs.append(os.path.join(r,folder))
+    #inputdirs = ["../data/random-aniline-nma-bare"]
+    inputdirs = ["./SSI_neutral"]
+    for r,d,f in os.walk("../data/5_28_19_pert-xyz-nrgs-derek-format"):
+        for folder in d:
+            inputdirs.append(os.path.join(r,folder))
+    for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format"):
+        for folder in d:
+            inputdirs.append(os.path.join(r,folder))
     #train_path = "./SSI_spiked_3"
     #train_path = "./SSI_spiked_2"
     
@@ -274,59 +291,86 @@ if __name__ == "__main__":
             train_atom_nums.append(temp_atom_nums[j])
             train_xyz.append(temp_xyz[j])
     (train_ntype, train_atype, train_unique_atoms) = routines.create_atype_list(train_atoms,routines.atomic_dictionary())
+
     #train_unique_atoms.append('F')
     #(train_atoms, train_atom_nums, train_xyz) = routines.get_xyz_from_combo_files(train_path)
     max_train_atoms = 0
     for i in range(len(train_atoms)):
         if len(train_atoms[i]) > max_train_atoms:
             max_train_atoms = len(train_atoms[i])
-    
+
     # Choose test path(s)
-    path = "./script_tests"
+    # DONORS:
+    #paths = ["../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--1H-naphthalene-PLDB-89-dmformat-xyz",
+    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--Aniline-CSD-xyzcoords-nrgs-dmv2-format",
+    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--Aniline-PDB-xyzcoords-nrgs-dmv2-format",
+    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--nip-ma-PDB-920-xyzcoords-nrgs-dmv2-format",
+    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--PhNCOPh-PDB-xyzcoords-nrgs-dmv2-format",
+    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/NMe-acetamide_Don--Benzimidazole-PDB-xyzcoords-nrgs-dmv2-format"]
+    #systems = ["NMA-1H-naphthalene", "NMA-aniline-CSD", "NMA-aniline-PDB", "NMA-nip-ma-PDB", "NMA-PhNCOPh-PDB", "NMA-Benzimidazole-PDB"]
     
-    #for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format-test"):
-    #    for folder in d:
-    #        path = os.path.join(r,folder)
-            #print(path) 
-            #path = "../data/20190413-test-molecules-10k-dm-format/NMA_Quinilone_random"
-            #path = "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--1H-naphthalene-PLDB-89-dmformat-xyz"
-        #path = "./SSI_neutral"
-        
-        # Gather test SAPT and descriptor info from path
-    (filenames, en_ph, elst_ph, exch_ph, ind_ph, disp_ph, vs_ph) = routines.get_sapt_from_combo_files(path)
-    (atoms, atom_nums, xyz) = routines.get_xyz_from_combo_files(path, filenames)
-    (filenames,tot_en,elst,exch,ind,disp,split_vec) = routines.get_sapt_from_combo_files(path)
-    (test_ntype, test_atype, test_unique_atoms) = routines.create_atype_list(atoms,routines.atomic_dictionary())
-    
-    sym_input = []
-    for i in range(len(filenames)):
-        file = f"{path}/{filenames[i]}_symfun.npy"
-        sym_input.append(np.load(file, allow_pickle=True))
-    mask = routines.get_test_mask(atom_nums, train_atom_nums)
-    mask = routines.pad_sym_inp(mask, max_train_atoms=max_train_atoms)
-    sym_input = routines.pad_sym_inp(sym_input, max_train_atoms=max_train_atoms)
-    sym_input = np.concatenate((sym_input,mask),axis=2)
-    
-    # Load in desired model to test from .h5 files
-    modelname = "script_test_model_out"
-    #testset = path.split("/")[-1]
+    # ACCEPTORS:
+    paths = ["../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--6-lactone_Don--NMe-acetamide-PDB-19-xyzcoords-nrgs-dmv2-format",
+        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--Cyclohexanone_Don--NMe-acetamide-PDB-11-xyzcoords-nrgs-dmv2-format",
+        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--IsoProp-Me-Ketone_Don--NMe-acetamide-PDB-105-xyzcoords-nrgs-dmv2-format",
+        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--NMe-acetamide_Don--Uracil-PDB--xyzcoords-nrgs-dmv2-format",
+        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--Pyridone_Don--NMe-acetamide-PDB-44-xyzcoords-nrgs-dmv2-format",
+        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--Quiniline_Don--NMe-acetamide-PDB-88-xyzcoords-nrgs-dmv2-format",
+        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Pert_Acc--Isoquinilone_NMe-acetamide-xyz"]
+    systems = ["6-lactone","cyclohexanone","isoprop-me-ketone","uracil","pyridone","quiniline","isoquinilone"]
 
-    model = load_model(f"./{modelname}_model.h5")
-    atom_model = load_model(f"./{modelname}_atomic_model.h5")
+    #paths = ["../data/20190413Acc--NMe-acetamide_Don--Aniline-CSD-PLDB-198-dmformat-xyz/Acc--NMe-acetamide_Don--Aniline-CSD-40-dmformat-xyz"]
+    #paths = ["../data/bare-nma-aniline-test"]
+    #systems = ["bare-nma-aniline-rand"]
+    for num, path in enumerate(paths):
+        #for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format-test"):
+        #    for folder in d:
+        #        path = os.path.join(r,folder)
+                #print(path) 
+                #path = "../data/20190413-test-molecules-10k-dm-format/NMA_Quinilone_random"
+                #path = "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--1H-naphthalene-PLDB-89-dmformat-xyz"
+            #path = "./SSI_neutral"
+            
+            # Gather test SAPT and descriptor info from path
+        (filenames, en_ph, elst_ph, exch_ph, ind_ph, disp_ph, vs_ph) = routines.get_sapt_from_combo_files(path)
+        (atoms, atom_nums, xyz) = routines.get_xyz_from_combo_files(path, filenames)
+        (filenames,tot_en,elst,exch,ind,disp,split_vec) = routines.get_sapt_from_combo_files(path)
+        (test_ntype, test_atype, test_unique_atoms) = routines.create_atype_list(atoms,routines.atomic_dictionary())
 
-    # Choose results name
-    #results_name = f"./test_results/{modelname}{testset}"
-    results_name = "script_test_set_preds"
-    
-    ## Get a molecular view of molec_id in test set, either predicted
-    ## atomwise energy or atomwise uncertainty estimate
-    #molec_id = 5 #which sample from dataset to graph
+        sym_input = []
+        for i in range(len(filenames)):
+            file = f"{path}/{filenames[i]}_symfun.npy"
+            sym_input.append(np.load(file, allow_pickle=True))
+            print(sym_input[i].shape)
+        mask = routines.get_test_mask(atom_nums, train_atom_nums)
+        mask = routines.pad_sym_inp(mask, max_train_atoms=max_train_atoms)
+        sym_input = routines.pad_sym_inp(sym_input, max_train_atoms=max_train_atoms)
+        sym_input = np.concatenate((sym_input,mask),axis=2)
+        #print(len(sym_input))        
+        sym_input = scale_sym_input(sym_input)
 
-    #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy") 
-    #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty") 
-    # Evaluate model and save results to {results_name}.csv
+        # Load in desired model to test from .h5 files
+        modelname = "don-and-acc-9-12"
+        #testset = path.split("/")[-1]
 
-    #sym_input = np.transpose(sym_input, (1,0,2))
-    #print(sym_input.shape) 
-    evaluate_model(model, sym_input, filenames, results_name, tot_en,
-                        elst, exch, ind, disp, uncertainty=False)
+        model = load_model(f"./{modelname}_model.h5")
+        #atom_model = load_model(f"./{modelname}_atomic_model.h5")
+
+        # Choose results name
+        #results_name = f"./test_results/{modelname}{testset}"
+        #results_name = f"../results/paper_stuff/{systems[num]}_don-and-acc-9-12"
+        results_name = f"./uncertainty_test"
+
+        ## Get a molecular view of molec_id in test set, either predicted
+        ## atomwise energy or atomwise uncertainty estimate
+        #molec_id = 5 #which sample from dataset to graph
+        xyz = routines.pad_sym_inp(xyz)
+        #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy") 
+        #for molec_id in range(20):
+        #    molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty") 
+        # Evaluate model and save results to {results_name}.csv
+
+        #sym_input = np.transpose(sym_input, (1,0,2))
+        print(sym_input.shape) 
+        evaluate_model(model, sym_input, filenames, results_name, tot_en,
+                            elst, exch, ind, disp, uncertainty=True)

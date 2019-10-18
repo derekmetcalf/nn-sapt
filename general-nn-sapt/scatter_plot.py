@@ -26,9 +26,9 @@ def scatter_plot_from_file(filename, plot_title):
     fig = plt.figure(figsize=(20,20))
     ax0 = fig.add_subplot(111)
     #im = ax0.scatter(total, total_pred, alpha=0.5, c="xkcd:black")
-    im = ax0.scatter(total, total_pred, alpha=0.8, c=total_std_dev, cmap="viridis")
+    im = ax0.scatter(total, total_pred, alpha=0.8)#, c=total_std_dev, cmap="viridis")
     
-    fig.colorbar(im)
+    #fig.colorbar(im)
 
     lims = [np.min([ax0.get_xlim(), ax0.get_ylim()]),
             np.max([ax0.get_xlim(), ax0.get_ylim()])]
@@ -55,8 +55,9 @@ def scatter_plot_from_file(filename, plot_title):
     plt.show()
     return
 
-scatter_plot_from_file("./test_results/0.0125/neutral-SSI_0.0125-spike_100-100-75NMe-acetamide_Don--Benzimidazole-PDB-xyzcoords-nrgs-dmv2-format.csv",
-                    "")
+scatter_plot_from_file("../results/paper_stuff/bare-nma-aniline-rand_results_model_UNUSED.csv","")
+#scatter_plot_from_file("./test_results/0.0125/neutral-SSI_0.0125-spike_100-100-75NMe-acetamide_Don--Benzimidazole-PDB-xyzcoords-nrgs-dmv2-format.csv",
+#                    "")
 #plot_sapt_from_file("./NMA-Aniline-0.1-crystal-pert.csv",
 #                    "NMA-Aniline Crystallographic Test Trained with Artificial Data and Unlabeled Perturbed Dimers")
 #plot_sapt_from_file("./artif_and_labeled_pert_crystal.csv",

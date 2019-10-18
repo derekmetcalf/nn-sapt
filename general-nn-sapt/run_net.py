@@ -34,7 +34,7 @@ their own run script for their purposes.
 
 def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
                 ind,disp,n_layer,nodes,mask,mt_vec,val_split,
-                dropout_fraction,l2_reg,epochs, results_name):
+                dropout_fraction,l2_reg,epochs, results_name, means, stds):
     """
     Train Behler-Parrinello neural network with provided symmetry function
     input, labels, network architecture and architecture. Output trained
@@ -43,7 +43,7 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
     """
     (model, test_en, energy_pred, test_elec, elec_pred, test_exch, exch_pred,
      test_disp, disp_pred, test_ind, ind_pred, avg_mae,
-     std_mae, atom_model) = sapt_net.sapt_net(
+     std_mae, atom_model, geom_files_train, geom_files_test) = sapt_net.sapt_net(
          sym_input,
          aname,
          inputdir,
@@ -59,7 +59,8 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
          data_fraction=(1 - val_split),
          dropout_fraction=dropout_fraction,
          l2_reg=l2_reg,
-         epochs=epochs)
+         epochs=epochs,
+         geom_files=geom_files)
     (en_mae, en_rmse, en_max_err, elec_mae, elec_rmse, elec_max_err, exch_mae,
      exch_rmse, exch_max_err, disp_mae, disp_rmse, disp_max_err,
      ind_mae, ind_rmse, ind_max_err) = sapt_net.sapt_errors(
@@ -67,6 +68,10 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
          test_disp, disp_pred, test_ind, ind_pred)
     
     csv_file = []
+    line = [means]
+    csv_file.append(line)
+    line = [stds]
+    csv_file.append(line)
     line = ["mae", "rmse", "max_error"]
     csv_file.append(line)
     line = ["total", en_mae, en_rmse, en_max_err]
@@ -86,7 +91,7 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
     csv_file.append(line)
     for i in range(len(energy_pred)):
         line = [
-            geom_files[i], test_en[i], energy_pred[i], test_elec[i],
+            geom_files_test[i], test_en[i], energy_pred[i], test_elec[i],
             elec_pred[i], test_exch[i], exch_pred[i], test_ind[i], ind_pred[i],
             test_disp[i], disp_pred[i]
         ]
@@ -95,7 +100,17 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
         writer = csv.writer(writeFile)
         writer.writerows(csv_file)
     writeFile.close()
-    
+
+
+    geom_lines = []
+    for i in range(len(geom_files_train)):
+        geom_lines.append(str(geom_files_train[i]))
+    for i in range(len(geom_files_test)):
+        geom_lines.append(str(geom_files_test[i]))
+    with open('%s_geoms.csv' % (inputdir), 'w') as writeFile:
+        for item in geom_lines:
+            writeFile.write("%s\n" % item)
+    writeFile.close()
     return model, atom_model
 
 if __name__ == "__main__":
@@ -103,17 +118,18 @@ if __name__ == "__main__":
     Choose model training characteristics and execute. 
     TODO: Wrap preprocessing as a class? Very ugly currently
 
-    """ 
-    
+    """
+
     # Choose paths from which to extract input directories or list
     # directories explicitly. These will contain dm-xyzs and .npy symfuns 
-    #paths = ["./script_tests"]
-    inputdirs = ["./script_tests"]
-    #inputdirs = []
-    #for path in paths:
-    #    for r,d,f in os.walk(path):
-    #        for folder in d:
-    #            inputdirs.append(os.path.join(r,folder))
+    paths = ["../data/5_28_19_pert-xyz-nrgs-derek-format", "../data/pert-xyz-nrgs-acceptors-derek-format"]
+    inputdirs = ["./SSI_neutral"]
+    #paths = []
+    #inputdirs = ["../data/random-aniline-nma-bare"]
+    for path in paths:
+        for r,d,f in os.walk(path):
+            for folder in d:
+                inputdirs.append(os.path.join(r,folder))
     
     # Extract necessary info for training from dm-xyz and symfun files
     aname = []
@@ -138,16 +154,16 @@ if __name__ == "__main__":
         path = inputdirs[i]
         print("Collecting properties and geometries...\n")
         t1 = time.time()
-        #if "SSI_spiked" in path:
-        #    (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
-        #    (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
-        #else:
-        #    (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=0.0125)
-        #    (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+        if "SSI" in path:
+            (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
+            (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+        else:
+            (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=0.00625)
+            (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+            
         
-        
-        (set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
-        (set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
+        #(set_filenames,set_tot_en,set_elst,set_exch,set_ind,set_disp,val_split) = routines.get_sapt_from_combo_files(path, keep_prob=1.00)
+        #(set_atoms,set_atom_nums,set_xyz) = routines.get_xyz_from_combo_files(path,set_filenames)
 
         for k in range(len(set_atom_nums)):
             atom_nums.append(set_atom_nums[k])
@@ -177,42 +193,50 @@ if __name__ == "__main__":
         t2 = time.time()
         elapsed = math.floor(t2 - t1)
         print("Symmetry functions loaded in %s seconds\n" % elapsed)
+    
+    #for i in range(len(filenames)): 
+    #    print(filenames[i].replace("'",""))
+    #quit()
+
     print(f"atom_nums len: {len(atom_nums)}")
     print(f"atom_nums[0]: {atom_nums[0]}")
     mask = routines.get_mask(atom_nums)
     mask = routines.pad_sym_inp(mask)
     print(f"mask shape: {mask.shape}")
     sym_input = np.array(sym_input) 
+    sym_input, means, stds = routines.scale_symmetry_input(sym_input)
     sym_input = routines.pad_sym_inp(sym_input)
-    
+
     sym_input = np.concatenate((sym_input, mask), axis=2)
     print(f"sym inp shape: {sym_input.shape}")
     (ntype, atype, unique_atoms) = routines.create_atype_list(atoms,routines.atomic_dictionary()) 
 
     # Define training parameters
-    dropout_fraction = 0.05
+    dropout_fraction = 0.10
     l2_reg = 0.005
-    nodes = [100,100,75]
-    val_split = 0.10
-    epochs = 10
+    nodes = [300,300,150]
+    #nodes = [5,5]
+    val_split = 0.05
+    epochs = 1000
     n_layer = len(nodes)
     mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
     
     # Choose output name
-    results_name = "script_test_model_out"
+    #results_name = f"speedy_test"
+    results_name = f"don-and-acc-9-30-sat-0.00625"
 
     # Train models
     (model, atom_model) = standard_run(sym_input,atoms,results_name,
                     filenames,tot_en,elst,exch,
                     ind,disp,n_layer,nodes,mask,mt_vec,val_split,
-                    dropout_fraction,l2_reg,epochs,results_name)
+                    dropout_fraction,l2_reg,epochs,results_name,means,stds)
     
+    # The following is written for training many MTP models
 
-    ## The following is written for training many MTP models
-    #for j in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
-    #    mt_vec = [1 - j, j / 4, j / 4, j / 4, j / 4]
-        #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-    #    results_name = "NMA_Indole_Aniline_MeOH_combo%.1g"%mt_vec[0]
-    #    standard_run(sym_input,aname,results_name,geom_files,energy,
-    #                 elec,exch,ind,disp,n_layer,nodes,mt_vec,val_split,   
-    #                 dropout_fraction,l2_reg,epochs,results_name)
+    #mt_vec = [1 - mt_frac, mt_frac / 4, mt_frac / 4, mt_frac / 4, mt_frac / 4]
+    #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
+    #results_name = "don_and_acc_multitarget_%.1g"%mt_vec[0]
+    #standard_run(sym_input,atoms,results_name,filenames,tot_en,
+    #             elst,exch,ind,disp,n_layer,nodes,mask,mt_vec,val_split,   
+    #             dropout_fraction,l2_reg,epochs,results_name,means,stds)
+    K.clear_session()
