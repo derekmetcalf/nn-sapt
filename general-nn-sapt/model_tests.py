@@ -300,37 +300,10 @@ if __name__ == "__main__":
             max_train_atoms = len(train_atoms[i])
 
     # Choose test path(s)
-    # DONORS:
-    #paths = ["../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--1H-naphthalene-PLDB-89-dmformat-xyz",
-    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--Aniline-CSD-xyzcoords-nrgs-dmv2-format",
-    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--Aniline-PDB-xyzcoords-nrgs-dmv2-format",
-    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--nip-ma-PDB-920-xyzcoords-nrgs-dmv2-format",
-    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--PhNCOPh-PDB-xyzcoords-nrgs-dmv2-format",
-    #    "../data/5_28_19_pert-xyz-nrgs-derek-format-test/NMe-acetamide_Don--Benzimidazole-PDB-xyzcoords-nrgs-dmv2-format"]
-    #systems = ["NMA-1H-naphthalene", "NMA-aniline-CSD", "NMA-aniline-PDB", "NMA-nip-ma-PDB", "NMA-PhNCOPh-PDB", "NMA-Benzimidazole-PDB"]
     
-    # ACCEPTORS:
-    paths = ["../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--6-lactone_Don--NMe-acetamide-PDB-19-xyzcoords-nrgs-dmv2-format",
-        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--Cyclohexanone_Don--NMe-acetamide-PDB-11-xyzcoords-nrgs-dmv2-format",
-        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--IsoProp-Me-Ketone_Don--NMe-acetamide-PDB-105-xyzcoords-nrgs-dmv2-format",
-        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--NMe-acetamide_Don--Uracil-PDB--xyzcoords-nrgs-dmv2-format",
-        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--Pyridone_Don--NMe-acetamide-PDB-44-xyzcoords-nrgs-dmv2-format",
-        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Acc--Quiniline_Don--NMe-acetamide-PDB-88-xyzcoords-nrgs-dmv2-format",
-        "../data/pert-xyz-nrgs-acceptors-derek-format-test/Pert_Acc--Isoquinilone_NMe-acetamide-xyz"]
-    systems = ["6-lactone","cyclohexanone","isoprop-me-ketone","uracil","pyridone","quiniline","isoquinilone"]
+    paths = []#insert relevant paths here     
 
-    #paths = ["../data/20190413Acc--NMe-acetamide_Don--Aniline-CSD-PLDB-198-dmformat-xyz/Acc--NMe-acetamide_Don--Aniline-CSD-40-dmformat-xyz"]
-    #paths = ["../data/bare-nma-aniline-test"]
-    #systems = ["bare-nma-aniline-rand"]
     for num, path in enumerate(paths):
-        #for r,d,f in os.walk("../data/pert-xyz-nrgs-acceptors-derek-format-test"):
-        #    for folder in d:
-        #        path = os.path.join(r,folder)
-                #print(path) 
-                #path = "../data/20190413-test-molecules-10k-dm-format/NMA_Quinilone_random"
-                #path = "../data/5_28_19_pert-xyz-nrgs-derek-format-test/Acc--NMe-acetamide_Don--1H-naphthalene-PLDB-89-dmformat-xyz"
-            #path = "./SSI_neutral"
-            
             # Gather test SAPT and descriptor info from path
         (filenames, en_ph, elst_ph, exch_ph, ind_ph, disp_ph, vs_ph) = routines.get_sapt_from_combo_files(path)
         (atoms, atom_nums, xyz) = routines.get_xyz_from_combo_files(path, filenames)
@@ -346,31 +319,17 @@ if __name__ == "__main__":
         mask = routines.pad_sym_inp(mask, max_train_atoms=max_train_atoms)
         sym_input = routines.pad_sym_inp(sym_input, max_train_atoms=max_train_atoms)
         sym_input = np.concatenate((sym_input,mask),axis=2)
-        #print(len(sym_input))        
         sym_input = scale_sym_input(sym_input)
 
-        # Load in desired model to test from .h5 files
-        modelname = "don-and-acc-9-12"
-        #testset = path.split("/")[-1]
+        modelname = "test_model"
 
         model = load_model(f"./{modelname}_model.h5")
-        #atom_model = load_model(f"./{modelname}_atomic_model.h5")
 
-        # Choose results name
-        #results_name = f"./test_results/{modelname}{testset}"
-        #results_name = f"../results/paper_stuff/{systems[num]}_don-and-acc-9-12"
-        results_name = f"./uncertainty_test"
+        # Choose results path
+        results_name = f"./test_model_results"
 
-        ## Get a molecular view of molec_id in test set, either predicted
-        ## atomwise energy or atomwise uncertainty estimate
-        #molec_id = 5 #which sample from dataset to graph
         xyz = routines.pad_sym_inp(xyz)
-        #molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="energy") 
-        #for molec_id in range(20):
-        #    molecular_viewer(atom_model, sym_input, xyz, molec_id, prop="uncertainty") 
-        # Evaluate model and save results to {results_name}.csv
 
-        #sym_input = np.transpose(sym_input, (1,0,2))
-        print(sym_input.shape) 
+        # Evaluate model and save results to {results_name}.csv
         evaluate_model(model, sym_input, filenames, results_name, tot_en,
                             elst, exch, ind, disp, uncertainty=True)

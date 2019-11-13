@@ -118,8 +118,6 @@ def sapt_net(sym_input,
     
     geom_files_train, geom_files_test, X_train, X_test, y_train, y_test = train_test_split(
         geom_files, sym_input, y, test_size=val_split, shuffle=True, random_state=42)
-    #X_train = sym_input
-    #y_train = y
 
     X_train = np.transpose(X_train, (1, 0, 2))
     X_test = np.transpose(X_test, (1, 0, 2))
@@ -166,17 +164,13 @@ def sapt_net(sym_input,
             typeNN.angular_symmetry_functions) + len(
             typeNN_intra.radial_symmetry_functions) + len(
             typeNN_intra.angular_symmetry_functions)
-        #i_size = 32
         atom_input = Input(shape=(i_size+len(NNunique), ))
-        #atom_mask = Input(shape=(len(NNunique), ))
         sym_inp = Lambda(lambda x: K.slice(x,[0,0],[-1,i_size]),
                             output_shape=(i_size, ))(atom_input)
         atom_mask = Lambda(lambda x: K.slice(x,[0,i_size],[-1,-1]),
                             output_shape=(len(NNunique), ))(atom_input)
 
 
-        #sym_inp = sym_split(atom_input)
-        #atom_mask = mask_split(atom_input)
         for j_atomnet in range(len(NNunique)):
             for k_layer in range(len(NNunique[j_atomnet])):
                 if k_layer == 0:
@@ -292,36 +286,3 @@ def sapt_errors(energy, energy_pred, elec, elec_pred, exch, exch_pred, disp,
             exch_mae, exch_rmse, exch_max_err, disp_mae, disp_rmse,
             disp_max_err, ind_mae, ind_rmse, ind_max_err)
 
-
-"""
-lin_elec = elec
-lin_exch = exch
-lin_ind = ind
-lin_disp = disp
-lin_energy = energy
-
-f, axarr = plt.subplots(2,2)
-axarr[0,0].scatter(elec,elec_pred,s=0.9,color='xkcd:red')
-axarr[0,0].set_title('Electrostatics')
-axarr[0,0].plot(elec,lin_elec,color='xkcd:coral')
-axarr[0,1].scatter(exch,exch_pred,s=0.9,color='xkcd:green')
-axarr[0,1].set_title('Exchange')
-axarr[0,1].plot(exch,lin_exch,color='xkcd:coral')
-axarr[1,0].scatter(ind,ind_pred,s=0.9,color='xkcd:blue')
-axarr[1,0].set_title('Induction')
-axarr[1,0].plot(ind,lin_ind,color='xkcd:coral')
-axarr[1,1].scatter(disp,disp_pred,s=0.9,color='xkcd:orange')
-axarr[1,1].set_title('Disperson')
-axarr[1,1].plot(disp,lin_disp,color='xkcd:coral')
-
-
-for ax in axarr.flat:
-    ax.set(xlabel=('SAPT energies %s'%en_units), ylabel=('NN energies %s'%en_units))
-plt.subplots_adjust(hspace=0.4)
-plt.show()
-
-plt.scatter(energy,energy_pred,s=0.9,color='xkcd:black')
-plt.title('Interaction Energy')
-plt.plot(energy,lin_energy,color='xkcd:coral')
-plt.show()
-"""

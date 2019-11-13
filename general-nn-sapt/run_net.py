@@ -26,8 +26,7 @@ from symfun_parameters import *
 """Train one or many neural networks.
 
 This document is "runtime-maintained" and care should be taken in blindly 
-running it. It may be less time-consuming for a NN-SAPT novice to write 
-their own run script for their purposes.
+running it. 
  
 """
 
@@ -116,16 +115,13 @@ def standard_run(sym_input,aname,inputdir,geom_files,energy,elec,exch,
 if __name__ == "__main__":
     """
     Choose model training characteristics and execute. 
-    TODO: Wrap preprocessing as a class? Very ugly currently
 
     """
 
     # Choose paths from which to extract input directories or list
     # directories explicitly. These will contain dm-xyzs and .npy symfuns 
-    paths = ["../data/5_28_19_pert-xyz-nrgs-derek-format", "../data/pert-xyz-nrgs-acceptors-derek-format"]
-    inputdirs = ["./SSI_neutral"]
-    #paths = []
-    #inputdirs = ["../data/random-aniline-nma-bare"]
+    paths = ["data_path_1", "data_path_2"]
+    inputdirs = []
     for path in paths:
         for r,d,f in os.walk(path):
             for folder in d:
@@ -194,10 +190,6 @@ if __name__ == "__main__":
         elapsed = math.floor(t2 - t1)
         print("Symmetry functions loaded in %s seconds\n" % elapsed)
     
-    #for i in range(len(filenames)): 
-    #    print(filenames[i].replace("'",""))
-    #quit()
-
     print(f"atom_nums len: {len(atom_nums)}")
     print(f"atom_nums[0]: {atom_nums[0]}")
     mask = routines.get_mask(atom_nums)
@@ -215,15 +207,13 @@ if __name__ == "__main__":
     dropout_fraction = 0.10
     l2_reg = 0.005
     nodes = [300,300,150]
-    #nodes = [5,5]
     val_split = 0.05
     epochs = 1000
     n_layer = len(nodes)
     mt_vec = [0.6, 0.1, 0.1, 0.1, 0.1]
     
     # Choose output name
-    #results_name = f"speedy_test"
-    results_name = f"don-and-acc-9-30-sat-0.00625"
+    results_name = f"results_path"
 
     # Train models
     (model, atom_model) = standard_run(sym_input,atoms,results_name,
@@ -231,12 +221,4 @@ if __name__ == "__main__":
                     ind,disp,n_layer,nodes,mask,mt_vec,val_split,
                     dropout_fraction,l2_reg,epochs,results_name,means,stds)
     
-    # The following is written for training many MTP models
-
-    #mt_vec = [1 - mt_frac, mt_frac / 4, mt_frac / 4, mt_frac / 4, mt_frac / 4]
-    #results_name = "%s_tot_en_frac_%.1g"%(inputdir,float(mt_vec[0]))
-    #results_name = "don_and_acc_multitarget_%.1g"%mt_vec[0]
-    #standard_run(sym_input,atoms,results_name,filenames,tot_en,
-    #             elst,exch,ind,disp,n_layer,nodes,mask,mt_vec,val_split,   
-    #             dropout_fraction,l2_reg,epochs,results_name,means,stds)
     K.clear_session()

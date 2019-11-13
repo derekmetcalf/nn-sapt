@@ -23,15 +23,8 @@ class NNforce_field(object):
     """Define symmetry function parameter object
 
     Stores parameters that define the atomic symmetry functions.
- 
-    HISTORICAL NOTE:
-    These have nothing to do with force fields in the MM sense.
-    Jesse McDaniel corresponds symmetry function parameters to 
-    force field parameters, since they and the model weights ultimately
-    determine preditcions of a system much like FF parameters. Since 
-    Dr. McDaniel wrote an early version of this code, this name has 
-    been embedded deeply in the lore of NN-SAPT and would frankly 
-    be annoying to take out at this point.
+    We confusingly label the symfun parameters as "force field" parameters.
+
     """
 
     def __init__(self, name, i, j):
@@ -408,12 +401,6 @@ class NNforce_field(object):
         atomtypes.
 
         Some compressed parameter --> NN method might be useful in the future.
-        
-        Unless we do our own genetic algorithm optimization on particular 
-        systems (or just gradient descent as long as we can concede 
-        constant parameter count), then we should just stick with these.
-        Exhaustively looking for better parameters with grid search 
-        is intractable.
         
         """
 

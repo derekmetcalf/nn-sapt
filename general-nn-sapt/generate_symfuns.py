@@ -12,11 +12,9 @@ terms attributed to the intermolecular set.
 """
 
 # Choose path from which to generate symfuns. Should include xyzs,
-# preferably in dm-format
+# with "filename,tot_interaction_en,elst,exch,ind,disp,atoms_in_mon_1" 
+# as the comment line
 
-#path = "../data/20190413Acc--NMe-acetamide_Don--Aniline-CSD-PLDB-198-dmformat-xyz/Acc--NMe-acetamide_Don--Aniline-PLDB-158-dmformat-xyz"
-
-#path = "../data/bare-nma-aniline-test"
 path = "timing_test"
 
 # Choose symmetry function parameters to use ("GA_opt" is from Gastegger)
@@ -40,9 +38,6 @@ folders.append(path)
 systems = 0
 for f in folders:
     systems += 1
-    #if systems > 3: #hardcoded, dont necessarily use
-    #    print(f"System number {systems}")
-    #    print(f"{f.split('/')[-1]}")
 
     # Get SAPT decomposition and intermolecular split locations
     (filenames,tot_en,elst,exch,ind,disp,split_vec) = routines.get_sapt_from_combo_files(f)
@@ -51,8 +46,6 @@ for f in folders:
 
     (atoms,atom_nums,xyz) = routines.get_xyz_from_combo_files(f, filenames)
     
-    split_vec = np.full((len(xyz)),12) # Hardcode for NMA/X case
-
     # Compute requisite distance and angle 2- and 3- tensors
     time1 = time.time()
 
@@ -62,9 +55,8 @@ for f in folders:
     # Compute symmetry function vector for each atom in each molecule
     
     routines.construct_symmetry_input(NN_A,f,filenames,
-            atoms,np.zeros(len(xyz)), atom_nums,0,NN_B,split_vec=[None])
+            atoms,np.zeros(len(xyz)), atom_nums,0,NN_B,split_vec)
     
     time2 = time.time()
     print(time2-time1)
-    #routines.construct_symmetry_input(NN_A,f,filenames,
-    #        atoms,np.zeros(len(xyz)), atom_nums,0,NN_B,split_vec)
+
